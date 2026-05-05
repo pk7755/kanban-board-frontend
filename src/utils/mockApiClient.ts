@@ -75,7 +75,10 @@ function writeStore<T>(key: string, value: T): void {
 export const authApi = {
   login: (credentials: LoginCredentials, _options?: RequestOptions) => {
     const user = MOCK_USERS.find((u) => u.email === credentials.email.trim().toLowerCase())
-    if (!user || credentials.password !== (user.role === 'MANAGER' ? 'Manager@123' : 'Member@123')) {
+    if (
+      !user ||
+      credentials.password !== (user.role === 'MANAGER' ? 'Manager@123' : 'Member@123')
+    ) {
       mockError('Invalid email or password', 401)
     }
     return delay(
