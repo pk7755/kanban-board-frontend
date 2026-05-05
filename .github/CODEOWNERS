@@ -1,0 +1,11 @@
+# CODEOWNERS — every PR must be reviewed by the listed owner(s)
+# Docs: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# Global owner — applies to every file not matched by a more specific rule
+*                           @pk7755
+
+# Frontend source code
+src/                        @pk7755
+
+# CI/CD and GitHub config
+.github/                    @pk7755

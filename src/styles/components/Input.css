@@ -1,0 +1,75 @@
+/*
+ * Input.css
+ * Shared styles for Input, Textarea, Select.
+ * All form controls share consistent focus ring, error, and disabled states.
+ */
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.field__label {
+  font-size: var(--text-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--text-primary);
+}
+
+.field__label--required::after {
+  content: ' *';
+  color: var(--danger-default);
+}
+
+.field__control {
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  transition:
+    border-color var(--transition-fast),
+    box-shadow var(--transition-fast);
+  appearance: none;
+}
+
+.field__control::placeholder {
+  color: var(--text-tertiary);
+}
+
+.field__control:hover:not(:disabled):not(:focus) {
+  border-color: var(--border-strong);
+}
+
+.field__control:focus {
+  outline: none;
+  border-color: var(--border-focus);
+  box-shadow: 0 0 0 3px var(--accent-muted);
+}
+
+.field__control:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background-color: var(--bg-subtle);
+}
+
+.field__control--error {
+  border-color: var(--danger-default);
+}
+
+.field__control--error:focus {
+  border-color: var(--danger-default);
+  box-shadow: 0 0 0 3px var(--danger-subtle);
+}
+
+.field__error {
+  font-size: var(--text-xs);
+  color: var(--danger-default);
+}
+
+.field__hint {
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+}
