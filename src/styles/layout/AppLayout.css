@@ -1,0 +1,50 @@
+/*
+ * AppLayout.css
+ * Main layout using CSS Grid with grid-template-areas (spec requirement).
+ * Areas: sidebar | header | main
+ */
+
+.app-layout {
+  display: grid;
+  grid-template-areas:
+    'sidebar header'
+    'sidebar main';
+  grid-template-columns: 240px 1fr;
+  grid-template-rows: 56px 1fr;
+  min-height: 100dvh;
+}
+
+/* ── Responsive: collapse sidebar on mobile ── */
+@media (max-width: 768px) {
+  .app-layout {
+    grid-template-areas:
+      'header'
+      'main';
+    grid-template-columns: 1fr;
+    grid-template-rows: 56px 1fr;
+  }
+
+  .app-layout__sidebar {
+    display: none;
+  }
+
+  .app-layout__sidebar--open {
+    display: flex;
+    position: fixed;
+    inset: 0;
+    z-index: var(--z-overlay);
+  }
+}
+
+.app-layout__sidebar {
+  grid-area: sidebar;
+}
+
+.app-layout__header {
+  grid-area: header;
+}
+
+.app-layout__main {
+  grid-area: main;
+  overflow: hidden;
+}
