@@ -63,11 +63,20 @@ export function Header({ searchValue, onSearchChange, isOnline }: HeaderProps) {
         {state.user && (
           <span className="header__user-badge" aria-label="Logged in user">
             {state.user.name}
-            <span className="header__user-role">{state.user.role === 'MANAGER' ? 'Manager' : 'Member'}</span>
+            <span className="header__user-role">
+              {state.user.role === 'MANAGER' ? 'Manager' : 'Member'}
+            </span>
           </span>
         )}
 
-        <Button variant="ghost" size="sm" iconOnly onClick={logout} aria-label="Log out" title="Log out">
+        <Button
+          variant="ghost"
+          size="sm"
+          iconOnly
+          onClick={logout}
+          aria-label="Log out"
+          title="Log out"
+        >
           <LogOut size={16} aria-hidden="true" />
         </Button>
       </div>

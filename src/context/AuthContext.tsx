@@ -15,14 +15,7 @@
  * used until the backend intern adds cookie support.
  */
 
-import {
-  createContext,
-  useContext,
-  useReducer,
-  useEffect,
-  useRef,
-  useCallback,
-} from 'react'
+import { createContext, useContext, useReducer, useEffect, useRef, useCallback } from 'react'
 import type { ReactNode } from 'react'
 import type { AuthState } from '@/types/auth'
 import type { AuthAction } from '@/types/actions'
@@ -103,7 +96,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const res = await authApi.refresh(refreshToken)
       const storedUser = JSON.parse(localStorage.getItem(USER_KEY) ?? 'null') as AuthUser | null
-      if (!storedUser) { logout(); return null }
+      if (!storedUser) {
+        logout()
+        return null
+      }
       saveSession(res.data.accessToken, res.data.refreshToken, storedUser)
       dispatch({ type: 'LOGIN', payload: { user: { ...storedUser, token: res.data.accessToken } } })
       return res.data.accessToken
@@ -153,16 +149,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     )
     const { accessToken, refreshToken, user } = res.data
 
-    const authUser: AuthUser = { id: user.id, name: user.name, email: user.email, role: user.role, token: accessToken }
+    const authUser: AuthUser = {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      token: accessToken,
+    }
     saveSession(accessToken, refreshToken, authUser)
     dispatch({ type: 'LOGIN', payload: { user: authUser } })
   }, [])
 
-  return (
-    <AuthContext.Provider value={{ state, login, logout }}>
-      {children}
-    </AuthContext.Provider>
-  )
+  return <AuthContext.Provider value={{ state, login, logout }}>{children}</AuthContext.Provider>
 }
 
 export function useAuth(): AuthContextValue {

@@ -21,43 +21,50 @@ describe('useDebounce', () => {
   })
 
   it('does not update before the delay elapses', () => {
-    const { result, rerender } = renderHook(
-      ({ value }) => useDebounce(value, 300),
-      { initialProps: { value: 'hello' } },
-    )
+    const { result, rerender } = renderHook(({ value }) => useDebounce(value, 300), {
+      initialProps: { value: 'hello' },
+    })
 
     rerender({ value: 'world' })
 
-    act(() => { vi.advanceTimersByTime(200) })
+    act(() => {
+      vi.advanceTimersByTime(200)
+    })
     expect(result.current).toBe('hello')
   })
 
   it('updates after the delay elapses', () => {
-    const { result, rerender } = renderHook(
-      ({ value }) => useDebounce(value, 300),
-      { initialProps: { value: 'hello' } },
-    )
+    const { result, rerender } = renderHook(({ value }) => useDebounce(value, 300), {
+      initialProps: { value: 'hello' },
+    })
 
     rerender({ value: 'world' })
 
-    act(() => { vi.advanceTimersByTime(300) })
+    act(() => {
+      vi.advanceTimersByTime(300)
+    })
     expect(result.current).toBe('world')
   })
 
   it('resets the timer on each change', () => {
-    const { result, rerender } = renderHook(
-      ({ value }) => useDebounce(value, 300),
-      { initialProps: { value: 'a' } },
-    )
+    const { result, rerender } = renderHook(({ value }) => useDebounce(value, 300), {
+      initialProps: { value: 'a' },
+    })
 
     rerender({ value: 'b' })
-    act(() => { vi.advanceTimersByTime(200) })
+    act(() => {
+      vi.advanceTimersByTime(200)
+    })
 
     rerender({ value: 'c' })
-    act(() => { vi.advanceTimersByTime(200) })
+    act(() => {
+      vi.advanceTimersByTime(200)
+    })
     expect(result.current).toBe('a') // still original
 
-    act(() => { vi.advanceTimersByTime(100) })
+    act(() => {
+      vi.advanceTimersByTime(100)
+    })
     expect(result.current).toBe('c') // now resolved to last value
   })
 })

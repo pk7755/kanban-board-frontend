@@ -20,9 +20,7 @@ export function NotAuthorizedPage() {
       }}
     >
       <h1 style={{ fontSize: 'var(--text-2xl)', color: 'var(--text-primary)' }}>Not Authorized</h1>
-      <p style={{ fontSize: 'var(--text-base)' }}>
-        You do not have permission to view this page.
-      </p>
+      <p style={{ fontSize: 'var(--text-base)' }}>You do not have permission to view this page.</p>
     </main>
   )
 }

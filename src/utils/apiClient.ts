@@ -13,12 +13,7 @@
 import type { ApiError, RequestOptions } from '@/types/api'
 import type { LoginCredentials } from '@/types/auth'
 import type { Board, Task, User, Column } from '@/types/entities'
-import type {
-  ApiResponse,
-  PaginatedResponse,
-  TaskQueryParams,
-  MoveTaskRequest,
-} from '@/types/api'
+import type { ApiResponse, PaginatedResponse, TaskQueryParams, MoveTaskRequest } from '@/types/api'
 import { tokenStore } from './tokenStore'
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? ''
@@ -80,7 +75,11 @@ async function request<T>(
   return response.json() as Promise<T>
 }
 
-function buildError(message: string, status: number, fieldErrors?: Record<string, string>): ApiError {
+function buildError(
+  message: string,
+  status: number,
+  fieldErrors?: Record<string, string>,
+): ApiError {
   return { message, status, fieldErrors }
 }
 
@@ -103,8 +102,7 @@ export const authApi = {
 
 /* ─── Boards ──────────────────────────────────────────────────────── */
 export const boardsApi = {
-  list: (options?: RequestOptions) =>
-    request<ApiResponse<Board[]>>('/boards', {}, options),
+  list: (options?: RequestOptions) => request<ApiResponse<Board[]>>('/boards', {}, options),
 
   get: (boardId: string, options?: RequestOptions) =>
     request<ApiResponse<Board>>(`/boards/${boardId}`, {}, options),
@@ -126,7 +124,11 @@ export const boardsApi = {
 /* ─── Columns ─────────────────────────────────────────────────────── */
 export const columnsApi = {
   create: (data: Omit<Column, 'id' | 'taskIds'>, options?: RequestOptions) =>
-    request<ApiResponse<Column>>('/columns', { method: 'POST', body: JSON.stringify(data) }, options),
+    request<ApiResponse<Column>>(
+      '/columns',
+      { method: 'POST', body: JSON.stringify(data) },
+      options,
+    ),
 
   rename: (columnId: string, title: string, options?: RequestOptions) =>
     request<ApiResponse<Column>>(
@@ -172,8 +174,7 @@ export const tasksApi = {
 
 /* ─── Users ───────────────────────────────────────────────────────── */
 export const usersApi = {
-  list: (options?: RequestOptions) =>
-    request<ApiResponse<User[]>>('/users', {}, options),
+  list: (options?: RequestOptions) => request<ApiResponse<User[]>>('/users', {}, options),
 
   create: (data: Partial<User> & { password: string }, options?: RequestOptions) =>
     request<ApiResponse<User>>('/users', { method: 'POST', body: JSON.stringify(data) }, options),

@@ -57,11 +57,7 @@ export function AppLayout({ boards, activeBoardId, onNewBoard, onSearch }: AppLa
       </div>
 
       <div className="app-layout__header">
-        <Header
-          searchValue={searchInput}
-          onSearchChange={setSearchInput}
-          isOnline={isOnline}
-        />
+        <Header searchValue={searchInput} onSearchChange={setSearchInput} isOnline={isOnline} />
       </div>
 
       <main className="app-layout__main" id="main-content">

@@ -28,4 +28,3 @@ export interface RegisterInput {
 export interface PasswordResetResult {
   temporaryPassword: string
 }
-

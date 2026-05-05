@@ -120,5 +120,3 @@ export function isTask(value: unknown): value is Task {
     'boardId' in value
   )
 }
-
-

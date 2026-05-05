@@ -54,7 +54,9 @@
   font-size: var(--text-sm);
   color: var(--text-secondary);
   cursor: pointer;
-  transition: background-color var(--transition-fast), color var(--transition-fast);
+  transition:
+    background-color var(--transition-fast),
+    color var(--transition-fast);
   text-decoration: none;
   border: none;
   background: none;

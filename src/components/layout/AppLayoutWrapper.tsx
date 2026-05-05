@@ -13,11 +13,5 @@ export function AppLayoutWrapper() {
   const handleNewBoard = useCallback(() => {}, [])
   const handleSearch = useCallback((_query: string) => {}, [])
 
-  return (
-    <AppLayout
-      boards={[]}
-      onNewBoard={handleNewBoard}
-      onSearch={handleSearch}
-    />
-  )
+  return <AppLayout boards={[]} onNewBoard={handleNewBoard} onSearch={handleSearch} />
 }

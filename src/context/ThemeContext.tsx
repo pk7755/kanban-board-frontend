@@ -12,7 +12,10 @@ interface ThemeState {
   theme: Theme
 }
 
-function themeReducer(state: ThemeState, action: { type: 'SET_THEME'; payload: { theme: Theme } }): ThemeState {
+function themeReducer(
+  state: ThemeState,
+  action: { type: 'SET_THEME'; payload: { theme: Theme } },
+): ThemeState {
   switch (action.type) {
     case 'SET_THEME':
       return { ...state, theme: action.payload.theme }
@@ -48,7 +51,9 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   // Re-apply when system preference changes (only matters in "system" mode)
   useEffect(() => {
     const mq = window.matchMedia('(prefers-color-scheme: dark)')
-    const handler = () => { if (state.theme === 'system') applyTheme('system') }
+    const handler = () => {
+      if (state.theme === 'system') applyTheme('system')
+    }
     mq.addEventListener('change', handler)
     return () => mq.removeEventListener('change', handler)
   }, [state.theme])

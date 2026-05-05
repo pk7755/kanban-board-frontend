@@ -4,8 +4,8 @@
  * Used when VITE_USE_MOCK=true.
  *
  * Mock credentials (development only — do NOT hardcode in production):
- *   Manager:     manager@test.com / password
- *   Team Member: member@test.com  / password
+ *   Manager:     manager@test.com / Manager@123
+ *   Team Member: member@test.com  / Member@123
  */
 
 import type { LoginCredentials } from '@/types/auth'
@@ -75,7 +75,7 @@ function writeStore<T>(key: string, value: T): void {
 export const authApi = {
   login: (credentials: LoginCredentials, _options?: RequestOptions) => {
     const user = MOCK_USERS.find((u) => u.email === credentials.email.trim().toLowerCase())
-    if (!user || credentials.password !== 'password') {
+    if (!user || credentials.password !== (user.role === 'MANAGER' ? 'Manager@123' : 'Member@123')) {
       mockError('Invalid email or password', 401)
     }
     return delay(
@@ -136,7 +136,10 @@ export const boardsApi = {
   },
 
   delete: (boardId: string, _options?: RequestOptions) => {
-    writeStore('boards', readStore<Board[]>('boards', []).filter((b) => b.id !== boardId))
+    writeStore(
+      'boards',
+      readStore<Board[]>('boards', []).filter((b) => b.id !== boardId),
+    )
     return delay(undefined as unknown as void)
   },
 }
@@ -149,9 +152,7 @@ export const columnsApi = {
     const column: Column = { id: `col-${Date.now()}`, ...data, taskIds: [] }
     writeStore(
       'boards',
-      boards.map((b) =>
-        b.id === data.boardId ? { ...b, columns: [...b.columns, column] } : b,
-      ),
+      boards.map((b) => (b.id === data.boardId ? { ...b, columns: [...b.columns, column] } : b)),
     )
     return delay(ok(column))
   },
@@ -248,7 +249,10 @@ export const tasksApi = {
   },
 
   delete: (taskId: string, _options?: RequestOptions) => {
-    writeStore('tasks', readStore<Task[]>('tasks', []).filter((t) => t.id !== taskId))
+    writeStore(
+      'tasks',
+      readStore<Task[]>('tasks', []).filter((t) => t.id !== taskId),
+    )
     return delay(undefined as unknown as void)
   },
 
@@ -259,7 +263,12 @@ export const tasksApi = {
       'tasks',
       tasks.map((t) => {
         if (t.id === taskId) {
-          updated = { ...t, columnId: data.toColumnId, order: data.toIndex, updatedAt: new Date().toISOString() }
+          updated = {
+            ...t,
+            columnId: data.toColumnId,
+            order: data.toIndex,
+            updatedAt: new Date().toISOString(),
+          }
           return updated
         }
         return t
@@ -312,9 +321,7 @@ export const usersApi = {
   deactivate: (userId: string, _options?: RequestOptions) => {
     writeStore(
       'users',
-      readStore<User[]>('users', []).map((u) =>
-        u.id === userId ? { ...u, active: false } : u,
-      ),
+      readStore<User[]>('users', []).map((u) => (u.id === userId ? { ...u, active: false } : u)),
     )
     return delay(undefined as unknown as void)
   },
