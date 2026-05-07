@@ -149,6 +149,16 @@
   gap: var(--space-2);
 }
 
+/* Danger-tinted ghost button for destructive actions */
+.users-page__btn-danger {
+  color: var(--danger-default, var(--color-danger-600)) !important;
+}
+
+.users-page__btn-danger:hover {
+  background-color: var(--color-danger-50) !important;
+  color: var(--color-danger-700) !important;
+}
+
 /* ─── Dialog (popup form) ─────────────────────────────────────────── */
 
 .users-page__dialog {

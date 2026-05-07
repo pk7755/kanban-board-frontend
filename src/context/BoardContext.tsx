@@ -322,6 +322,9 @@ function boardReducer(state: BoardState, action: InternalBoardAction): BoardStat
           [action.payload.taskId]: {
             ...currentTask,
             ...action.payload,
+            // boardId and columnId are structural — boardId never changes on update
+            boardId: currentTask.boardId,
+            columnId: action.payload.columnId || currentTask.columnId,
             updatedAt: new Date().toISOString(),
           },
         },

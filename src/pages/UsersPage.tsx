@@ -6,7 +6,7 @@
  */
 
 import { useEffect, useRef, useState } from 'react'
-import { Copy, Plus, RefreshCw, UserX } from 'lucide-react'
+import { Copy, Plus, RefreshCw, Trash2, UserX } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { useAuth } from '@/context/AuthContext'
@@ -65,6 +65,11 @@ export function UsersPage() {
   const [deactivateTarget, setDeactivateTarget] = useState<User | null>(null)
   const deactivateDialogRef = useRef<HTMLDialogElement>(null)
 
+  // Delete confirmation dialog
+  const [deleteTarget, setDeleteTarget] = useState<User | null>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
+  const deleteDialogRef = useRef<HTMLDialogElement>(null)
+
   // Reset password dialog
   const [resetTarget, setResetTarget] = useState<User | null>(null)
   const [tempPassword, setTempPassword] = useState<string | null>(null)
@@ -120,6 +125,13 @@ export function UsersPage() {
     if (!resetTarget && dialog.open) dialog.close()
   }, [resetTarget])
 
+  useEffect(() => {
+    const dialog = deleteDialogRef.current
+    if (!dialog) return
+    if (deleteTarget && !dialog.open) dialog.showModal()
+    if (!deleteTarget && dialog.open) dialog.close()
+  }, [deleteTarget])
+
   /* ── Form validation ── */
   function validateForm(): boolean {
     const errors: Partial<UserFormState> = {}
@@ -159,6 +171,19 @@ export function UsersPage() {
       prev.map((u) => (u.id === deactivateTarget.id ? { ...u, active: false } : u)),
     )
     setDeactivateTarget(null)
+  }
+
+  /* ── Delete ── */
+  const handleDelete = async () => {
+    if (!deleteTarget) return
+    setIsDeleting(true)
+    try {
+      await usersApi.delete(deleteTarget.id)
+      setUsers((prev) => prev.filter((u) => u.id !== deleteTarget.id))
+      setDeleteTarget(null)
+    } finally {
+      setIsDeleting(false)
+    }
   }
 
   /* ── Reset password ── */
@@ -295,6 +320,18 @@ export function UsersPage() {
                             <UserX size={13} aria-hidden="true" />
                           </Button>
                         )}
+                        {user.id !== currentUserId && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setDeleteTarget(user)}
+                            aria-label={`Delete ${user.name}`}
+                            title="Delete user"
+                            className="users-page__btn-danger"
+                          >
+                            <Trash2 size={13} aria-hidden="true" />
+                          </Button>
+                        )}
                         <Button
                           variant="ghost"
                           size="sm"
@@ -415,6 +452,23 @@ export function UsersPage() {
             Deactivate
           </Button>
           <Button variant="ghost" onClick={() => setDeactivateTarget(null)}>
+            Cancel
+          </Button>
+        </div>
+      </dialog>
+
+      {/* ── Delete confirmation dialog ── */}
+      <dialog ref={deleteDialogRef} className="users-page__dialog" aria-label="Confirm deletion">
+        <h2 className="users-page__dialog-title">Delete Member</h2>
+        <p style={{ color: 'var(--text-secondary)', margin: '0 0 var(--space-5)' }}>
+          Are you sure you want to permanently delete{' '}
+          <strong>{deleteTarget?.name}</strong>? This action cannot be undone.
+        </p>
+        <div className="users-page__dialog-actions">
+          <Button variant="danger" onClick={() => { void handleDelete() }} disabled={isDeleting}>
+            {isDeleting ? 'Deleting…' : 'Delete'}
+          </Button>
+          <Button variant="ghost" onClick={() => setDeleteTarget(null)} disabled={isDeleting}>
             Cancel
           </Button>
         </div>

@@ -366,6 +366,12 @@ export const usersApi = {
     return delay(undefined as unknown as void)
   },
 
+  delete: (userId: string, _options?: RequestOptions) => {
+    const stored = readStore<User[]>('users', [])
+    writeStore('users', stored.filter((u) => u.id !== userId))
+    return delay(undefined as unknown as void)
+  },
+
   resetPassword: (_userId: string, _options?: RequestOptions) => {
     return delay(ok({ temporaryPassword: 'Temp@1234' }))
   },

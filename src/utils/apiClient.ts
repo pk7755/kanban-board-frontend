@@ -90,6 +90,19 @@ async function request<T>(
   return response.json() as Promise<T>
 }
 
+/**
+ * Like `request`, but automatically unwraps the backend's standard
+ * `{ data: T, statusCode, timestamp }` envelope and returns `T` directly.
+ */
+async function requestW<T>(
+  path: string,
+  init: RequestInit = {},
+  options: RequestOptions = {},
+): Promise<T> {
+  const envelope = await request<{ data: T }>(path, init, options)
+  return envelope.data
+}
+
 function buildError(
   message: string,
   status: number,
@@ -125,17 +138,17 @@ export const authApi = {
 
 /* ─── Boards ──────────────────────────────────────────────────────── */
 export const boardsApi = {
-  /** GET /boards — returns raw array; normalised to {data: Board[]} */
+  /** GET /boards — backend wraps in {data:[...]}; normalised to {data: Board[]} */
   list: async (options?: RequestOptions): Promise<ApiResponse<Board[]>> => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const raw = await request<any[]>('/boards', {}, options)
+    const raw = await requestW<any[]>('/boards', {}, options)
     return { data: raw.map(adaptBoard) }
   },
 
   /** GET /boards/:id — returns full detail with columns + members */
   get: async (boardId: string, options?: RequestOptions): Promise<ApiResponse<Board>> => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const raw = await request<any>(`/boards/${boardId}`, {}, options)
+    const raw = await requestW<any>(`/boards/${boardId}`, {}, options)
     return { data: adaptBoardDetail(raw) }
   },
 
@@ -145,7 +158,7 @@ export const boardsApi = {
     options?: RequestOptions,
   ): Promise<ApiResponse<Board>> => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const raw = await request<any>(
+    const raw = await requestW<any>(
       '/boards',
       { method: 'POST', body: JSON.stringify({ name: data.title }) },
       options,
@@ -156,7 +169,7 @@ export const boardsApi = {
   /** PATCH /boards/:id — backend field is `name`, not `title` */
   rename: async (boardId: string, title: string, options?: RequestOptions): Promise<ApiResponse<Board>> => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const raw = await request<any>(
+    const raw = await requestW<any>(
       `/boards/${boardId}`,
       { method: 'PATCH', body: JSON.stringify({ name: title }) },
       options,
@@ -176,7 +189,7 @@ export const columnsApi = {
     options?: RequestOptions,
   ): Promise<ApiResponse<Column>> => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const raw = await request<any>(
+    const raw = await requestW<any>(
       '/columns',
       { method: 'POST', body: JSON.stringify({ name: data.title, boardId: data.boardId }) },
       options,
@@ -191,12 +204,11 @@ export const columnsApi = {
     options?: RequestOptions,
   ): Promise<ApiResponse<Column>> => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const raw = await request<any>(
+    const raw = await requestW<any>(
       `/columns/${columnId}`,
       { method: 'PATCH', body: JSON.stringify({ name: title }) },
       options,
     )
-    // raw.boardId may be present in the response
     return { data: adaptColumn(raw, raw.boardId ?? '') }
   },
 
@@ -224,8 +236,10 @@ export const tasksApi = {
     Object.entries(params).forEach(([k, v]) => {
       if (v !== undefined) query.set(k, String(v))
     })
+    // Backend: { data: { data: Task[], meta: {...} }, statusCode, timestamp }
+    // requestW unwraps outer envelope → { data: Task[], meta: {...} }
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const raw = await request<any>(`/tasks?${query}`, {}, options)
+    const raw = await requestW<any>(`/tasks?${query}`, {}, options)
     return adaptTasksResponse(raw, params.boardId)
   },
 
@@ -235,7 +249,7 @@ export const tasksApi = {
   ): Promise<ApiResponse<Task>> => {
     const body = adaptTaskCreatePayload(data)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const raw = await request<any>('/tasks', { method: 'POST', body: JSON.stringify(body) }, options)
+    const raw = await requestW<any>('/tasks', { method: 'POST', body: JSON.stringify(body) }, options)
     return { data: adaptTask(raw, data.boardId) }
   },
 
@@ -246,12 +260,11 @@ export const tasksApi = {
   ): Promise<ApiResponse<Task>> => {
     const body = adaptTaskUpdatePayload(data)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const raw = await request<any>(
+    const raw = await requestW<any>(
       `/tasks/${taskId}`,
       { method: 'PATCH', body: JSON.stringify(body) },
       options,
     )
-    // boardId from the raw response is not present; use data.boardId if supplied
     return { data: adaptTask(raw, data.boardId ?? '') }
   },
 
@@ -273,7 +286,7 @@ export const tasksApi = {
 export const tagsApi = {
   list: async (boardId: string, options?: RequestOptions): Promise<ApiResponse<Tag[]>> => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const raw = await request<any[]>(`/boards/${boardId}/tags`, {}, options)
+    const raw = await requestW<any[]>(`/boards/${boardId}/tags`, {}, options)
     return { data: raw.map(adaptTag) }
   },
 
@@ -283,7 +296,7 @@ export const tagsApi = {
     options?: RequestOptions,
   ): Promise<ApiResponse<Tag>> => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const raw = await request<any>(
+    const raw = await requestW<any>(
       `/boards/${boardId}/tags`,
       { method: 'POST', body: JSON.stringify(data) },
       options,
@@ -297,7 +310,7 @@ export const tagsApi = {
     options?: RequestOptions,
   ): Promise<ApiResponse<Tag>> => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const raw = await request<any>(
+    const raw = await requestW<any>(
       `/tags/${tagId}`,
       { method: 'PATCH', body: JSON.stringify(data) },
       options,
@@ -309,35 +322,50 @@ export const tagsApi = {
     request<void>(`/tags/${tagId}`, { method: 'DELETE' }, options),
 }
 export const usersApi = {
-  list: (options?: RequestOptions) => request<ApiResponse<User[]>>('/users', {}, options),
+  /** GET /users — backend: { data: { data: User[], pagination: {...} }, ... } */
+  list: async (options?: RequestOptions): Promise<ApiResponse<User[]>> => {
+    const paginated = await requestW<{ data: User[]; pagination: unknown }>('/users', {}, options)
+    return { data: paginated.data }
+  },
 
-  create: (data: Partial<User> & { password: string }, options?: RequestOptions) =>
-    request<ApiResponse<User>>('/users', { method: 'POST', body: JSON.stringify(data) }, options),
+  create: async (data: Partial<User> & { password: string }, options?: RequestOptions): Promise<ApiResponse<User>> => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const raw = await requestW<any>('/users', { method: 'POST', body: JSON.stringify(data) }, options)
+    return { data: raw }
+  },
 
-  update: (userId: string, data: Partial<User>, options?: RequestOptions) =>
-    request<ApiResponse<User>>(
+  update: async (userId: string, data: Partial<User>, options?: RequestOptions): Promise<ApiResponse<User>> => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const raw = await requestW<any>(
       `/users/${userId}`,
       { method: 'PATCH', body: JSON.stringify(data) },
       options,
-    ),
+    )
+    return { data: raw }
+  },
 
   /** Update the currently authenticated user's own profile (PATCH /users/me) */
-  updateMe: (_userId: string, data: Partial<User>, options?: RequestOptions) =>
-    request<ApiResponse<User>>(
+  updateMe: async (_userId: string, data: Partial<User>, options?: RequestOptions): Promise<ApiResponse<User>> => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const raw = await requestW<any>(
       '/users/me',
       { method: 'PATCH', body: JSON.stringify(data) },
       options,
-    ),
+    )
+    return { data: raw }
+  },
 
   deactivate: (userId: string, options?: RequestOptions) =>
     request<void>(`/users/${userId}/deactivate`, { method: 'PATCH' }, options),
 
-  resetPassword: (userId: string, options?: RequestOptions) =>
-    request<ApiResponse<{ temporaryPassword: string }>>(
-      `/users/${userId}/reset-password`,
-      { method: 'POST' },
-      options,
-    ),
+  delete: (userId: string, options?: RequestOptions) =>
+    request<void>(`/users/${userId}`, { method: 'DELETE' }, options),
+
+  resetPassword: async (userId: string, options?: RequestOptions): Promise<ApiResponse<{ temporaryPassword: string }>> => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const raw = await requestW<any>(`/users/${userId}/reset-password`, { method: 'POST' }, options)
+    return { data: raw }
+  },
 
   changePassword: (
     userId: string,

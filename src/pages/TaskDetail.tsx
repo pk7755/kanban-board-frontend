@@ -42,7 +42,6 @@ function normalizeDateValue(value?: string): string {
 
 export default function TaskDetail({ taskId, onClose }: TaskDetailProps) {
   const dialogRef = useRef<HTMLDialogElement>(null)
-  const closingRef = useRef(false)
   const { state: authState } = useAuth()
   const { state, dispatch } = useBoardContext()
   const task = state.tasks[taskId]
@@ -52,35 +51,59 @@ export default function TaskDetail({ taskId, onClose }: TaskDetailProps) {
   const [newChecklistItem, setNewChecklistItem] = useState('')
   const [isLoading, setIsLoading] = useState(true)
 
-  // Sync draft when task updates from outside (e.g. another action resolves)
+  // Sync draft when task updates externally (e.g. drag-and-drop column change)
   useEffect(() => {
     setDraft(task ?? null) // eslint-disable-line react-hooks/set-state-in-effect
   }, [task])
 
+  // Guard: if task is removed from state (deleted), close the dialog
   useEffect(() => {
     if (!task) onClose()
   }, [onClose, task])
 
+  /**
+   * Effect 1 — Open the dialog on mount, close it on unmount.
+   * Empty deps: runs exactly once per real mount/unmount cycle.
+   * StrictMode double-invoke: mount→close→remount→open is handled correctly
+   * because each cleanup closes and each mount reopens.
+   */
   useEffect(() => {
     const dialog = dialogRef.current
     if (!dialog) return
-
-    const handleClose = () => {
-      if (closingRef.current) return
-      closingRef.current = true
-      onClose()
+    if (!dialog.open) dialog.showModal()
+    return () => {
+      if (dialog.open) dialog.close()
     }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
+  /**
+   * Effect 2 — Intercept the native ESC key (cancel event).
+   * Prevents the browser from closing the dialog directly; routes through
+   * onClose() so React state drives the unmount (which triggers Effect 1 cleanup).
+   */
+  useEffect(() => {
+    const dialog = dialogRef.current
+    if (!dialog) return
     const handleCancel = (event: Event) => {
       event.preventDefault()
-      dialog.close()
+      onClose()
     }
+    dialog.addEventListener('cancel', handleCancel)
+    return () => dialog.removeEventListener('cancel', handleCancel)
+  }, [onClose])
 
+  /**
+   * Effect 3 — Tab-key focus trap within the dialog.
+   * No dependency on onClose; stable with empty deps.
+   */
+  useEffect(() => {
+    const dialog = dialogRef.current
+    if (!dialog) return
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key !== 'Tab') return
-      const focusable = Array.from(dialog.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)).filter(
-        (element) => !element.hasAttribute('disabled'),
-      )
+      const focusable = Array.from(
+        dialog.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR),
+      ).filter((el) => !el.hasAttribute('disabled'))
       if (focusable.length === 0) return
       const first = focusable[0]
       const last = focusable[focusable.length - 1]
@@ -92,28 +115,9 @@ export default function TaskDetail({ taskId, onClose }: TaskDetailProps) {
         first.focus()
       }
     }
-
-    dialog.addEventListener('close', handleClose)
-    dialog.addEventListener('cancel', handleCancel)
     dialog.addEventListener('keydown', handleKeyDown)
-
-    if (!dialog.open) {
-      dialog.showModal()
-    }
-
-    const firstFocusable = dialog.querySelector<HTMLElement>(FOCUSABLE_SELECTOR)
-    firstFocusable?.focus()
-
-    return () => {
-      dialog.removeEventListener('close', handleClose)
-      dialog.removeEventListener('cancel', handleCancel)
-      dialog.removeEventListener('keydown', handleKeyDown)
-      if (dialog.open) {
-        closingRef.current = true
-        dialog.close()
-      }
-    }
-  }, [onClose])
+    return () => dialog.removeEventListener('keydown', handleKeyDown)
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!task) return
@@ -167,7 +171,8 @@ export default function TaskDetail({ taskId, onClose }: TaskDetailProps) {
 
   return (
     <dialog ref={dialogRef} className="task-detail" aria-label={`Task details for ${task.title}`}>
-      <div className="task-detail__backdrop" onClick={() => dialogRef.current?.close()} aria-hidden="true" />
+      {/* Backdrop click calls onClose() directly — React state drives the unmount */}
+      <div className="task-detail__backdrop" onClick={onClose} aria-hidden="true" />
       <div className="task-detail__panel">
         <header className="task-detail__header">
           <div>
@@ -181,7 +186,7 @@ export default function TaskDetail({ taskId, onClose }: TaskDetailProps) {
                 Read only
               </span>
             ) : null}
-            <Button type="button" variant="ghost" size="sm" iconOnly onClick={() => dialogRef.current?.close()} aria-label="Close task details">
+            <Button type="button" variant="ghost" size="sm" iconOnly onClick={onClose} aria-label="Close task details">
               <X size={16} />
             </Button>
           </div>

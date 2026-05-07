@@ -7,13 +7,14 @@
   display: flex;
   flex-direction: column;
   width: min(340px, 85vw);
-  max-height: calc(100dvh - 180px);
+  /* No max-height — column grows naturally with its tasks */
   padding: var(--space-4);
   background-color: var(--bg-surface);
   border: 1px solid var(--border-default);
   border-radius: var(--radius-xl);
   box-shadow: var(--shadow-sm);
   gap: var(--space-4);
+  flex-shrink: 0;
 }
 
 .board-column__header {
@@ -104,8 +105,7 @@
   flex-direction: column;
   gap: var(--space-3);
   min-height: 120px;
-  overflow-y: auto;
-  padding-right: var(--space-1);
+  /* No overflow-y: auto — tasks expand the column, window scrollbar handles it */
 }
 
 .board-column__footer {

@@ -24,11 +24,17 @@ function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }
 
-function renderHighlightedText(text: string, query: string) {
-  if (!query.trim()) return text
-  const parts = text.split(new RegExp(`(${escapeRegExp(query.trim())})`, 'gi'))
+function renderHighlightedText(text: string | null | undefined, query: string) {
+  const safeText = text ?? ''
+  if (!query.trim()) return safeText
+  const trimmedQuery = query.trim()
+  const parts = safeText.split(new RegExp(`(${escapeRegExp(trimmedQuery)})`, 'gi'))
   return parts.map((part, index) =>
-    part.toLowerCase() === query.trim().toLowerCase() ? <mark key={`${part}-${index}`}>{part}</mark> : part,
+    part.toLowerCase() === trimmedQuery.toLowerCase() ? (
+      <mark key={`${part}-${index}`}>{part}</mark>
+    ) : (
+      part
+    ),
   )
 }
 

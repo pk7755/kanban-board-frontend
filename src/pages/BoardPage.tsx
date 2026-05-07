@@ -46,6 +46,7 @@ function BoardPageInner() {
   const { state, dispatch, activeBoard, activeTasks } = useBoardContext()
   const { searchQuery, newBoardDialogOpen, closeNewBoardDialog, openNewBoardDialog } = useSearchContext()
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null)
+  const handleCloseTaskDetail = useCallback(() => setSelectedTaskId(null), [])
   const [userMap, setUserMap] = useState<UserMap>({})
   const [isEditingTitle, setIsEditingTitle] = useState(false)
   const [draftTitle, setDraftTitle] = useState('')
@@ -206,6 +207,8 @@ function BoardPageInner() {
     setIsAddingColumn(false)
   }
 
+  const DEFAULT_COLUMNS = ['To Do', 'In Progress', 'In Review', 'Done']
+
   const handleCreateBoard = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     const title = newBoardTitle.trim()
@@ -214,11 +217,24 @@ function BoardPageInner() {
       title,
       description: newBoardDescription.trim() || undefined,
     })
-    dispatch({ type: 'ADD_BOARD', payload: response.data })
+    const board = response.data
+
+    // Create the 4 default columns in parallel
+    const columnResponses = await Promise.all(
+      DEFAULT_COLUMNS.map((colTitle, i) =>
+        columnsApi.create({ title: colTitle, boardId: board.id, order: i }),
+      ),
+    )
+    const boardWithColumns = {
+      ...board,
+      columns: columnResponses.map((r) => r.data),
+    }
+
+    dispatch({ type: 'ADD_BOARD', payload: boardWithColumns })
     setNewBoardTitle('')
     setNewBoardDescription('')
     closeNewBoardDialog()
-    navigate(`/boards/${response.data.id}`)
+    navigate(`/boards/${board.id}`)
   }
 
   // ── Export: serialize active board + its tasks to a JSON file ──
@@ -504,7 +520,7 @@ function BoardPageInner() {
 
       {selectedTaskId ? (
         <Suspense fallback={<Skeleton className="board-page__modal-skeleton" height="12rem" />}>
-          <TaskDetail taskId={selectedTaskId} onClose={() => setSelectedTaskId(null)} />
+          <TaskDetail key={selectedTaskId} taskId={selectedTaskId} onClose={handleCloseTaskDetail} />
         </Suspense>
       ) : null}
     </div>

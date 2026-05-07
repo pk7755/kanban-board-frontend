@@ -70,11 +70,11 @@ export function Column({ column, tasks, taskMap, userMap, searchQuery, onTaskCli
       if (task.archived) return false
       if (!query) return true
       const tagLabels = boardTags
-        .filter((tag) => task.tags.includes(tag.id))
-        .map((tag) => tag.label.toLowerCase())
+        .filter((tag) => task.tags?.includes(tag.id))
+        .map((tag) => (tag.label ?? '').toLowerCase())
         .join(' ')
-      const assigneeName = task.assigneeId ? userMap[task.assigneeId]?.name.toLowerCase() ?? '' : ''
-      return [task.title, task.description, tagLabels, assigneeName].join(' ').toLowerCase().includes(query)
+      const assigneeName = task.assigneeId ? (userMap[task.assigneeId]?.name ?? '').toLowerCase() : ''
+      return [task.title ?? '', task.description ?? '', tagLabels, assigneeName].join(' ').toLowerCase().includes(query)
     })
 
     return visible.slice().sort((left, right) => {
@@ -88,7 +88,7 @@ export function Column({ column, tasks, taskMap, userMap, searchQuery, onTaskCli
           return new Date(left.dueDate).getTime() - new Date(right.dueDate).getTime()
         }
         case 'title':
-          return left.title.localeCompare(right.title)
+          return (left.title ?? '').localeCompare(right.title ?? '')
         default:
           return left.order - right.order
       }

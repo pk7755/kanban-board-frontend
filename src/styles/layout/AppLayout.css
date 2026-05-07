@@ -2,6 +2,10 @@
  * AppLayout.css
  * Main layout using CSS Grid with grid-template-areas (spec requirement).
  * Areas: sidebar | header | main
+ *
+ * Scroll model:
+ *   - Sidebar is sticky / viewport-height — never scrolls
+ *   - Main content grows naturally and the window scrollbar handles vertical scroll
  */
 
 .app-layout {
@@ -12,6 +16,24 @@
   grid-template-columns: 240px 1fr;
   grid-template-rows: 56px 1fr;
   min-height: 100dvh;
+}
+
+/* ── Sidebar: sticks to viewport, never scrolls ── */
+.app-layout__sidebar {
+  grid-area: sidebar;
+  position: sticky;
+  top: 0;
+  height: 100dvh;
+  overflow: hidden;
+}
+
+.app-layout__header {
+  grid-area: header;
+}
+
+/* Main content grows naturally — window/body provides the one vertical scrollbar */
+.app-layout__main {
+  grid-area: main;
 }
 
 /* ── Responsive: collapse sidebar on mobile ── */
@@ -34,17 +56,4 @@
     inset: 0;
     z-index: var(--z-overlay);
   }
-}
-
-.app-layout__sidebar {
-  grid-area: sidebar;
-}
-
-.app-layout__header {
-  grid-area: header;
-}
-
-.app-layout__main {
-  grid-area: main;
-  overflow: hidden;
 }
