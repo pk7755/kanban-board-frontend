@@ -29,6 +29,7 @@ export interface User {
 /** Shape returned after login — extends User with auth fields */
 export interface AuthUser extends Readonly<Pick<User, 'id' | 'name' | 'email' | 'role'>> {
   token: string
+  avatarUrl?: string
 }
 
 /* ─── Tag ─────────────────────────────────────────────────────────── */

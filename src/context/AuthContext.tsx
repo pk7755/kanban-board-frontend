@@ -29,6 +29,9 @@ function authReducer(state: AuthState, action: AuthAction): AuthState {
   switch (action.type) {
     case 'LOGIN':
       return { ...state, user: action.payload.user, isAuthenticated: true, isLoading: false }
+    case 'UPDATE_PROFILE':
+      if (!state.user) return state
+      return { ...state, user: { ...state.user, ...action.payload } }
     case 'LOGOUT':
       return { user: null, token: null, isAuthenticated: false, isLoading: false }
     default:
@@ -49,6 +52,7 @@ interface AuthContextValue {
   state: AuthState
   login: (email: string, password: string) => Promise<void>
   logout: () => void
+  updateProfile: (name: string, email: string, avatarUrl?: string) => void
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null)
@@ -160,7 +164,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     dispatch({ type: 'LOGIN', payload: { user: authUser } })
   }, [])
 
-  return <AuthContext.Provider value={{ state, login, logout }}>{children}</AuthContext.Provider>
+  const updateProfile = useCallback((name: string, email: string, avatarUrl?: string) => {
+    dispatch({ type: 'UPDATE_PROFILE', payload: { name, email, avatarUrl } })
+    const stored = JSON.parse(localStorage.getItem(USER_KEY) ?? 'null') as AuthUser | null
+    if (stored) {
+      localStorage.setItem(USER_KEY, JSON.stringify({ ...stored, name, email, avatarUrl }))
+    }
+  }, [])
+
+  return <AuthContext.Provider value={{ state, login, logout, updateProfile }}>{children}</AuthContext.Provider>
 }
 
 export function useAuth(): AuthContextValue {

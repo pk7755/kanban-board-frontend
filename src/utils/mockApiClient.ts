@@ -9,7 +9,7 @@
  */
 
 import type { LoginCredentials } from '@/types/auth'
-import type { Board, Task, User, Column } from '@/types/entities'
+import type { Board, Task, User, Column, Tag } from '@/types/entities'
 import type {
   ApiResponse,
   PaginatedResponse,
@@ -190,6 +190,27 @@ export const columnsApi = {
     )
     return delay(undefined as unknown as void)
   },
+
+  reorder: (boardId: string, columnIds: string[], _options?: RequestOptions) => {
+    const boards = readStore<Board[]>('boards', [])
+    writeStore(
+      'boards',
+      boards.map((b) => {
+        if (b.id !== boardId) return b
+        const byId = new Map(b.columns.map((c) => [c.id, c]))
+        return {
+          ...b,
+          columns: columnIds
+            .map((id, i) => {
+              const col = byId.get(id)
+              return col ? { ...col, order: i } : null
+            })
+            .filter((c): c is Column => c !== null),
+        }
+      }),
+    )
+    return delay(undefined as unknown as void)
+  },
 }
 
 /* ─── Tasks ───────────────────────────────────────────────────────── */
@@ -284,14 +305,35 @@ export const tasksApi = {
 
 /* ─── Users ───────────────────────────────────────────────────────── */
 
+/**
+ * Returns all users: localStorage overrides take precedence over MOCK_USERS
+ * so a seeded user that gets edited doesn't appear twice in the list.
+ */
+function allUsers(): User[] {
+  const extra = readStore<User[]>('users', [])
+  const overriddenIds = new Set(extra.map((u) => u.id))
+  return [...MOCK_USERS.filter((u) => !overriddenIds.has(u.id)), ...extra]
+}
+
+/**
+ * Upsert a user into the localStorage 'users' store.
+ * Works for both MOCK_USERS (not yet in store) and dynamically created users.
+ */
+function upsertUser(updated: User): void {
+  const stored = readStore<User[]>('users', [])
+  const exists = stored.some((u) => u.id === updated.id)
+  writeStore(
+    'users',
+    exists ? stored.map((u) => (u.id === updated.id ? updated : u)) : [...stored, updated],
+  )
+}
+
 export const usersApi = {
   list: (_options?: RequestOptions) => {
-    const extra = readStore<User[]>('users', [])
-    return delay(ok([...MOCK_USERS, ...extra]))
+    return delay(ok(allUsers()))
   },
 
   create: (data: Partial<User> & { password: string }, _options?: RequestOptions) => {
-    const users = readStore<User[]>('users', [])
     const user: User = {
       id: `user-${Date.now()}`,
       name: data.name ?? '',
@@ -300,36 +342,83 @@ export const usersApi = {
       active: true,
       createdAt: new Date().toISOString(),
     }
-    writeStore('users', [...users, user])
+    upsertUser(user)
     return delay(ok(user))
   },
 
   update: (userId: string, data: Partial<User>, _options?: RequestOptions) => {
-    const users = readStore<User[]>('users', [])
-    let updated: User | undefined
-    writeStore(
-      'users',
-      users.map((u) => {
-        if (u.id === userId) {
-          updated = { ...u, ...data }
-          return updated
-        }
-        return u
-      }),
-    )
-    if (!updated) mockError('User not found', 404)
-    return delay(ok(updated!))
+    const user = allUsers().find((u) => u.id === userId)
+    if (!user) mockError('User not found', 404)
+    const updated = { ...user!, ...data }
+    upsertUser(updated)
+    return delay(ok(updated))
+  },
+
+  /** Update own profile — same as update in mock (userId known from caller) */
+  updateMe: (userId: string, data: Partial<User>, options?: RequestOptions) => {
+    return usersApi.update(userId, data, options)
   },
 
   deactivate: (userId: string, _options?: RequestOptions) => {
-    writeStore(
-      'users',
-      readStore<User[]>('users', []).map((u) => (u.id === userId ? { ...u, active: false } : u)),
-    )
+    const user = allUsers().find((u) => u.id === userId)
+    if (!user) mockError('User not found', 404)
+    upsertUser({ ...user!, active: false })
     return delay(undefined as unknown as void)
   },
 
   resetPassword: (_userId: string, _options?: RequestOptions) => {
     return delay(ok({ temporaryPassword: 'Temp@1234' }))
+  },
+
+  changePassword: (userId: string, data: { currentPassword: string; newPassword: string }, _options?: RequestOptions) => {
+    if (!data.currentPassword) mockError('Current password is required', 400)
+    if (!allUsers().find((u) => u.id === userId)) mockError('User not found', 404)
+    return delay(ok({ message: 'Password changed successfully' }))
+  },
+}
+
+/* ─── Tags (mock) ─────────────────────────────────────────────────── */
+export const tagsApi = {
+  list: (boardId: string, _options?: RequestOptions) => {
+    const tags = readStore<Tag[]>(`tags:${boardId}`, [])
+    return delay(ok(tags))
+  },
+
+  create: (boardId: string, data: { label: string; color: string }, _options?: RequestOptions) => {
+    const tags = readStore<Tag[]>(`tags:${boardId}`, [])
+    const newTag: Tag = { id: `tag-${Date.now()}`, label: data.label, color: data.color }
+    writeStore(`tags:${boardId}`, [...tags, newTag])
+    return delay(ok(newTag))
+  },
+
+  update: (tagId: string, data: Partial<Tag>, _options?: RequestOptions) => {
+    // Tags are stored per-board; scan all board-tag stores
+    const keys = Object.keys(localStorage).filter((k) => k.startsWith('kanban:tags:'))
+    for (const key of keys) {
+      const tags: Tag[] = JSON.parse(localStorage.getItem(key) ?? '[]') as Tag[]
+      const idx = tags.findIndex((t) => t.id === tagId)
+      if (idx !== -1) {
+        const updated = { ...tags[idx], ...data }
+        tags[idx] = updated
+        localStorage.setItem(key, JSON.stringify(tags))
+        return delay(ok(updated))
+      }
+    }
+    mockError('Tag not found', 404)
+    // unreachable, but satisfies return type
+    return delay(ok(data as Tag))
+  },
+
+  delete: (tagId: string, _options?: RequestOptions) => {
+    const keys = Object.keys(localStorage).filter((k) => k.startsWith('kanban:tags:'))
+    for (const key of keys) {
+      const tags: Tag[] = JSON.parse(localStorage.getItem(key) ?? '[]') as Tag[]
+      const filtered = tags.filter((t) => t.id !== tagId)
+      if (filtered.length !== tags.length) {
+        localStorage.setItem(key, JSON.stringify(filtered))
+        break
+      }
+    }
+    return delay(undefined as unknown as void)
   },
 }

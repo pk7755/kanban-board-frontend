@@ -14,6 +14,7 @@ export const authApi = useMock ? mock.authApi : real.authApi
 export const boardsApi = useMock ? mock.boardsApi : real.boardsApi
 export const columnsApi = useMock ? mock.columnsApi : real.columnsApi
 export const tasksApi = useMock ? mock.tasksApi : real.tasksApi
+export const tagsApi = useMock ? mock.tagsApi : real.tagsApi
 export const usersApi = useMock ? mock.usersApi : real.usersApi
 
 export { configureApiClient } from './apiClient'

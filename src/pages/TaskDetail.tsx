@@ -1,0 +1,471 @@
+/**
+ * TaskDetail.tsx
+ * Full-screen task detail dialog with field-level persistence.
+ */
+
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ChangeEvent,
+  type KeyboardEvent as ReactKeyboardEvent,
+} from 'react'
+import { Lock, Trash2, X } from 'lucide-react'
+import { Button } from '@/components/ui/Button'
+import { Skeleton } from '@/components/ui/Skeleton'
+import { useAuth } from '@/context/AuthContext'
+import { useBoardContext } from '@/context/BoardContext'
+import type { Board, ChecklistItem, Task, User, UserMap } from '@/types/entities'
+import { boardsApi, tasksApi, usersApi } from '@/utils/api'
+import '@/styles/components/Input.css'
+import '@/styles/pages/TaskDetail.css'
+
+interface TaskDetailProps {
+  taskId: string
+  onClose: () => void
+}
+
+const FOCUSABLE_SELECTOR =
+  'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+
+function toUserMap(users: User[]): UserMap {
+  return users.reduce<UserMap>((acc, user) => {
+    acc[user.id] = user
+    return acc
+  }, {})
+}
+
+function normalizeDateValue(value?: string): string {
+  return value ? value.slice(0, 10) : ''
+}
+
+export default function TaskDetail({ taskId, onClose }: TaskDetailProps) {
+  const dialogRef = useRef<HTMLDialogElement>(null)
+  const closingRef = useRef(false)
+  const { state: authState } = useAuth()
+  const { state, dispatch } = useBoardContext()
+  const task = state.tasks[taskId]
+  const [users, setUsers] = useState<UserMap>({})
+  const [board, setBoard] = useState<Board | null>(null)
+  const [draft, setDraft] = useState<Task | null>(task ?? null)
+  const [newChecklistItem, setNewChecklistItem] = useState('')
+  const [isLoading, setIsLoading] = useState(true)
+
+  // Sync draft when task updates from outside (e.g. another action resolves)
+  useEffect(() => {
+    setDraft(task ?? null) // eslint-disable-line react-hooks/set-state-in-effect
+  }, [task])
+
+  useEffect(() => {
+    if (!task) onClose()
+  }, [onClose, task])
+
+  useEffect(() => {
+    const dialog = dialogRef.current
+    if (!dialog) return
+
+    const handleClose = () => {
+      if (closingRef.current) return
+      closingRef.current = true
+      onClose()
+    }
+
+    const handleCancel = (event: Event) => {
+      event.preventDefault()
+      dialog.close()
+    }
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== 'Tab') return
+      const focusable = Array.from(dialog.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)).filter(
+        (element) => !element.hasAttribute('disabled'),
+      )
+      if (focusable.length === 0) return
+      const first = focusable[0]
+      const last = focusable[focusable.length - 1]
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault()
+        last.focus()
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault()
+        first.focus()
+      }
+    }
+
+    dialog.addEventListener('close', handleClose)
+    dialog.addEventListener('cancel', handleCancel)
+    dialog.addEventListener('keydown', handleKeyDown)
+
+    if (!dialog.open) {
+      dialog.showModal()
+    }
+
+    const firstFocusable = dialog.querySelector<HTMLElement>(FOCUSABLE_SELECTOR)
+    firstFocusable?.focus()
+
+    return () => {
+      dialog.removeEventListener('close', handleClose)
+      dialog.removeEventListener('cancel', handleCancel)
+      dialog.removeEventListener('keydown', handleKeyDown)
+      if (dialog.open) {
+        closingRef.current = true
+        dialog.close()
+      }
+    }
+  }, [onClose])
+
+  useEffect(() => {
+    if (!task) return
+    let cancelled = false
+
+    async function loadDetailData(boardId: string) {
+      setIsLoading(true)
+      try {
+        const [usersResponse, boardResponse] = await Promise.all([usersApi.list(), boardsApi.get(boardId)])
+        if (cancelled) return
+        setUsers(toUserMap(usersResponse.data))
+        setBoard(boardResponse.data)
+      } finally {
+        if (!cancelled) setIsLoading(false)
+      }
+    }
+
+    void loadDetailData(task.boardId)
+
+    return () => {
+      cancelled = true
+    }
+  }, [task])
+
+  const currentUser = authState.user
+  const canEdit = Boolean(
+    task && currentUser && (currentUser.role === 'MANAGER' || currentUser.id === task.assigneeId),
+  )
+  const canDelete = currentUser?.role === 'MANAGER'
+
+  const saveTask = async (changes: Partial<Task>) => {
+    if (!task || !draft || !canEdit) return
+    const response = await tasksApi.update(task.id, changes)
+    dispatch({ type: 'UPDATE_TASK', payload: { taskId: task.id, ...response.data } })
+    setDraft(response.data)
+  }
+
+  const saveField = async <K extends keyof Task>(field: K, value: Task[K]) => {
+    if (!task || !draft || !canEdit) return
+    if (draft[field] === task[field]) return
+    await saveTask({ [field]: value } as Partial<Task>)
+  }
+
+  const checklistProgress = useMemo(() => {
+    if (!draft || draft.checklist.length === 0) return null
+    const completed = draft.checklist.filter((item) => item.completed).length
+    return `${completed}/${draft.checklist.length}`
+  }, [draft])
+
+  if (!task || !draft) return null
+
+  return (
+    <dialog ref={dialogRef} className="task-detail" aria-label={`Task details for ${task.title}`}>
+      <div className="task-detail__backdrop" onClick={() => dialogRef.current?.close()} aria-hidden="true" />
+      <div className="task-detail__panel">
+        <header className="task-detail__header">
+          <div>
+            <p className="task-detail__eyebrow">Task details</p>
+            <h2 className="task-detail__heading">{task.title}</h2>
+          </div>
+          <div className="task-detail__header-actions">
+            {!canEdit ? (
+              <span className="task-detail__readonly" aria-label="Read only task details">
+                <Lock size={14} aria-hidden="true" />
+                Read only
+              </span>
+            ) : null}
+            <Button type="button" variant="ghost" size="sm" iconOnly onClick={() => dialogRef.current?.close()} aria-label="Close task details">
+              <X size={16} />
+            </Button>
+          </div>
+        </header>
+
+        {isLoading ? (
+          <div className="task-detail__loading">
+            <Skeleton height="2.5rem" />
+            <Skeleton lines={4} height="1rem" />
+            <Skeleton height="2.5rem" />
+          </div>
+        ) : (
+          <div className="task-detail__content">
+            <div className="field">
+              <label className="field__label" htmlFor="task-title">
+                Title
+              </label>
+              <input
+                id="task-title"
+                className="field__control"
+                value={draft.title}
+                readOnly={!canEdit}
+                onChange={(event) => setDraft((current) => (current ? { ...current, title: event.target.value } : current))}
+                onBlur={() => {
+                  void saveField('title', draft.title)
+                }}
+              />
+            </div>
+
+            <div className="field">
+              <label className="field__label" htmlFor="task-description">
+                Description
+              </label>
+              <textarea
+                id="task-description"
+                className="field__control task-detail__textarea"
+                value={draft.description}
+                readOnly={!canEdit}
+                onChange={(event) =>
+                  setDraft((current) => (current ? { ...current, description: event.target.value } : current))
+                }
+                onBlur={() => {
+                  void saveField('description', draft.description)
+                }}
+                rows={5}
+              />
+            </div>
+
+            <div className="task-detail__grid">
+              <div className="field">
+                <label className="field__label" htmlFor="task-priority">
+                  Priority
+                </label>
+                <select
+                  id="task-priority"
+                  className="field__control"
+                  value={draft.priority}
+                  disabled={!canEdit}
+                  onChange={(event) =>
+                    setDraft((current) =>
+                      current ? { ...current, priority: event.target.value as Task['priority'] } : current,
+                    )
+                  }
+                  onBlur={() => {
+                    void saveField('priority', draft.priority)
+                  }}
+                >
+                  <option value="low">Low</option>
+                  <option value="medium">Medium</option>
+                  <option value="high">High</option>
+                </select>
+              </div>
+
+              <div className="field">
+                <label className="field__label" htmlFor="task-due-date">
+                  Due date
+                </label>
+                <input
+                  id="task-due-date"
+                  type="date"
+                  className="field__control"
+                  value={normalizeDateValue(draft.dueDate)}
+                  readOnly={!canEdit}
+                  onChange={(event) =>
+                    setDraft((current) =>
+                      current
+                        ? {
+                            ...current,
+                            dueDate: event.target.value ? new Date(event.target.value).toISOString() : undefined,
+                          }
+                        : current,
+                    )
+                  }
+                  onBlur={() => {
+                    void saveField('dueDate', draft.dueDate)
+                  }}
+                />
+              </div>
+
+              <div className="field">
+                <label className="field__label" htmlFor="task-assignee">
+                  Assignee
+                </label>
+                <select
+                  id="task-assignee"
+                  className="field__control"
+                  value={draft.assigneeId ?? ''}
+                  disabled={!canEdit}
+                  onChange={(event) =>
+                    setDraft((current) =>
+                      current
+                        ? { ...current, assigneeId: event.target.value || undefined }
+                        : current,
+                    )
+                  }
+                  onBlur={() => {
+                    void saveField('assigneeId', draft.assigneeId)
+                  }}
+                >
+                  <option value="">Unassigned</option>
+                  {Object.values(users).map((user) => (
+                    <option key={user.id} value={user.id}>
+                      {user.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="field">
+                <label className="field__label">Checklist progress</label>
+                <div className="task-detail__meta-box">{checklistProgress ?? 'No checklist items'}</div>
+              </div>
+            </div>
+
+            <section className="task-detail__section" aria-labelledby="task-tags-heading">
+              <div className="task-detail__section-header">
+                <h3 id="task-tags-heading">Tags</h3>
+              </div>
+              <div className="task-detail__tag-list">
+                {board?.tags.length ? (
+                  board.tags.map((tag) => {
+                    const checked = draft.tags.includes(tag.id)
+                    return (
+                      <label key={tag.id} className="task-detail__checkbox-chip">
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          disabled={!canEdit}
+                          onChange={(event: ChangeEvent<HTMLInputElement>) => {
+                            const nextTags = event.target.checked
+                              ? [...draft.tags, tag.id]
+                              : draft.tags.filter((tagId) => tagId !== tag.id)
+                            setDraft((current) => (current ? { ...current, tags: nextTags } : current))
+                            void saveTask({ tags: nextTags })
+                          }}
+                        />
+                        <span>{tag.label}</span>
+                      </label>
+                    )
+                  })
+                ) : (
+                  <p className="task-detail__muted">This board has no tags yet.</p>
+                )}
+              </div>
+            </section>
+
+            <section className="task-detail__section" aria-labelledby="task-checklist-heading">
+              <div className="task-detail__section-header">
+                <h3 id="task-checklist-heading">Checklist</h3>
+              </div>
+              <div className="task-detail__checklist">
+                {draft.checklist.map((item) => (
+                  <div key={item.id} className="task-detail__checklist-item">
+                    <label className="task-detail__checklist-label">
+                      <input
+                        type="checkbox"
+                        checked={item.completed}
+                        disabled={!canEdit}
+                        onChange={(event) => {
+                          const nextChecklist = draft.checklist.map((candidate) =>
+                            candidate.id === item.id
+                              ? { ...candidate, completed: event.target.checked }
+                              : candidate,
+                          )
+                          setDraft((current) => (current ? { ...current, checklist: nextChecklist } : current))
+                          void saveTask({ checklist: nextChecklist })
+                        }}
+                      />
+                      <input
+                        className="field__control task-detail__checklist-text"
+                        value={item.text}
+                        readOnly={!canEdit}
+                        onChange={(event) => {
+                          const nextChecklist = draft.checklist.map((candidate) =>
+                            candidate.id === item.id ? { ...candidate, text: event.target.value } : candidate,
+                          )
+                          setDraft((current) => (current ? { ...current, checklist: nextChecklist } : current))
+                        }}
+                        onBlur={() => {
+                          if (!canEdit) return
+                          void saveTask({ checklist: draft.checklist })
+                        }}
+                      />
+                    </label>
+                    {canEdit ? (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          const nextChecklist = draft.checklist.filter((candidate) => candidate.id !== item.id)
+                          setDraft((current) => (current ? { ...current, checklist: nextChecklist } : current))
+                          void saveTask({ checklist: nextChecklist })
+                        }}
+                      >
+                        Remove
+                      </Button>
+                    ) : null}
+                  </div>
+                ))}
+              </div>
+              {canEdit ? (
+                <div className="task-detail__add-checklist">
+                  <input
+                    className="field__control"
+                    value={newChecklistItem}
+                    placeholder="Add checklist item"
+                    onChange={(event) => setNewChecklistItem(event.target.value)}
+                    onKeyDown={(event: ReactKeyboardEvent<HTMLInputElement>) => {
+                      if (event.key !== 'Enter') return
+                      event.preventDefault()
+                      const value = newChecklistItem.trim()
+                      if (!value) return
+                      const nextChecklist: ChecklistItem[] = [
+                        ...draft.checklist,
+                        { id: `check-${Date.now()}`, text: value, completed: false },
+                      ]
+                      setDraft((current) => (current ? { ...current, checklist: nextChecklist } : current))
+                      setNewChecklistItem('')
+                      void saveTask({ checklist: nextChecklist })
+                    }}
+                  />
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={() => {
+                      const value = newChecklistItem.trim()
+                      if (!value) return
+                      const nextChecklist: ChecklistItem[] = [
+                        ...draft.checklist,
+                        { id: `check-${Date.now()}`, text: value, completed: false },
+                      ]
+                      setDraft((current) => (current ? { ...current, checklist: nextChecklist } : current))
+                      setNewChecklistItem('')
+                      void saveTask({ checklist: nextChecklist })
+                    }}
+                  >
+                    Add item
+                  </Button>
+                </div>
+              ) : null}
+            </section>
+          </div>
+        )}
+
+        {canDelete ? (
+          <footer className="task-detail__footer">
+            <Button
+              type="button"
+              variant="danger"
+              onClick={() => {
+                if (!task) return
+                void tasksApi.delete(task.id).then(() => {
+                  dispatch({ type: 'DELETE_TASK', payload: { taskId: task.id, columnId: task.columnId } })
+                  dialogRef.current?.close()
+                })
+              }}
+            >
+              <Trash2 size={14} aria-hidden="true" />
+              Delete task
+            </Button>
+          </footer>
+        ) : null}
+      </div>
+    </dialog>
+  )
+}

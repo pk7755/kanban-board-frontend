@@ -6,6 +6,7 @@
  * /              — redirect to /boards
  * /boards/:id    — protected
  * /users         — protected + MANAGER only
+ * /profile       — protected, all roles
  */
 
 import { createBrowserRouter, Navigate } from 'react-router-dom'
@@ -15,6 +16,7 @@ import { LoginPage } from '@/pages/LoginPage'
 import { BoardPage } from '@/pages/BoardPage'
 import { UsersPage } from '@/pages/UsersPage'
 import { AppLayoutWrapper } from '@/components/layout/AppLayoutWrapper'
+import ProfilePage from '@/pages/ProfilePage'
 
 export const router = createBrowserRouter([
   {
@@ -38,6 +40,10 @@ export const router = createBrowserRouter([
           {
             path: '/boards/:boardId',
             element: <BoardPage />,
+          },
+          {
+            path: '/profile',
+            element: <ProfilePage />,
           },
           {
             element: <RoleGuard allowedRoles={['MANAGER']} />,

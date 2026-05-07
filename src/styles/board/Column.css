@@ -1,0 +1,175 @@
+/*
+ * Column.css
+ * Board column layout and interactions.
+ */
+
+.board-column {
+  display: flex;
+  flex-direction: column;
+  width: min(340px, 85vw);
+  max-height: calc(100dvh - 180px);
+  padding: var(--space-4);
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-sm);
+  gap: var(--space-4);
+}
+
+.board-column__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.board-column__header-main {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.board-column__title-button {
+  padding: 0;
+  color: inherit;
+}
+
+.board-column__title,
+.board-column__title-input {
+  font-size: var(--text-base);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-primary);
+}
+
+.board-column__title-input,
+.board-column__task-input,
+.board-page__title-input {
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  background-color: var(--bg-surface-raised);
+}
+
+.board-column__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.board-column__sort-label {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.board-column__sort-text {
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+}
+
+.board-column__sort-select {
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-default);
+  background-color: var(--bg-surface-raised);
+}
+
+.board-column__delete {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  color: var(--danger-default);
+  border-radius: var(--radius-md);
+  opacity: 0;
+  transition:
+    opacity var(--transition-fast),
+    background-color var(--transition-fast);
+}
+
+.board-column:hover .board-column__delete,
+.board-column:focus-within .board-column__delete {
+  opacity: 1;
+}
+
+.board-column__delete:hover {
+  background-color: var(--danger-subtle);
+}
+
+.board-column__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-height: 120px;
+  overflow-y: auto;
+  padding-right: var(--space-1);
+}
+
+.board-column__footer {
+  margin-top: auto;
+}
+
+.board-column__task-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.board-column__task-input {
+  resize: vertical;
+  min-height: 88px;
+}
+
+.board-column__task-form-actions {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.board-column__add-task {
+  width: 100%;
+  justify-content: center;
+}
+
+/* ─── Drag & Drop ─────────────────────────────────────────────────── */
+
+/* Column body drop-target highlight */
+.board-column__body--drop-target {
+  background-color: var(--accent-subtle);
+  border-radius: var(--radius-md);
+  outline: 2px dashed var(--accent-default);
+  outline-offset: -2px;
+  transition: background-color var(--transition-fast);
+}
+
+/* Slot wrapper — keeps spacing stable during drag */
+.board-column__task-slot {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Drop indicator line — appears between cards */
+.drop-indicator {
+  height: 3px;
+  border-radius: var(--radius-full);
+  background-color: var(--accent-default);
+  margin: 2px var(--space-1);
+  animation: drop-indicator-in 120ms ease-out both;
+}
+
+@keyframes drop-indicator-in {
+  from { opacity: 0; transform: scaleX(0.6); }
+  to   { opacity: 1; transform: scaleX(1);   }
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .board-column__body--drop-target {
+    transition: none;
+  }
+  .drop-indicator {
+    animation: none;
+  }
+}

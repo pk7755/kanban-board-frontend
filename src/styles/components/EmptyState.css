@@ -1,0 +1,40 @@
+/*
+ * EmptyState.css
+ * Shared centered empty state styling.
+ */
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  padding: var(--space-8);
+  text-align: center;
+  color: var(--text-secondary);
+}
+
+.empty-state__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  border-radius: var(--radius-full);
+  background-color: var(--bg-subtle);
+  color: var(--text-tertiary);
+}
+
+.empty-state__title {
+  color: var(--text-primary);
+  font-size: var(--text-lg);
+  font-weight: var(--font-weight-semibold);
+}
+
+.empty-state__description {
+  max-width: 32rem;
+}
+
+.empty-state__action {
+  margin-top: var(--space-2);
+}

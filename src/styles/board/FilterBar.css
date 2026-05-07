@@ -1,0 +1,195 @@
+/*
+ * FilterBar.css
+ * Horizontal filter strip — flex row, wraps on narrow viewports.
+ * No hardcoded hex values — all colors via design tokens.
+ */
+
+.filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-6);
+  background-color: var(--bg-surface);
+  border-bottom: 1px solid var(--border-default);
+  min-height: 44px;
+}
+
+/* Active state — subtle accent tint on the bar */
+.filter-bar--active {
+  background-color: var(--accent-subtle);
+  border-bottom-color: var(--accent-default);
+}
+
+/* ── Label ── */
+
+.filter-bar__label {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--text-xs);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-right: var(--space-1);
+  flex-shrink: 0;
+}
+
+/* ── Groups ── */
+
+.filter-bar__group {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  flex-wrap: wrap;
+}
+
+.filter-bar__group--dates {
+  gap: var(--space-2);
+}
+
+/* ── Chips ── */
+
+.filter-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-full);
+  border: 1px solid var(--border-default);
+  background: none;
+  font-size: var(--text-xs);
+  font-weight: var(--font-weight-medium);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition:
+    background-color var(--transition-fast),
+    color var(--transition-fast),
+    border-color var(--transition-fast);
+  white-space: nowrap;
+}
+
+.filter-chip:hover {
+  background-color: var(--bg-subtle);
+  color: var(--text-primary);
+}
+
+.filter-chip--active {
+  background-color: var(--accent-subtle);
+  border-color: var(--accent-default);
+  color: var(--accent-default);
+}
+
+/* Priority chip active variants */
+.filter-chip--priority-low.filter-chip--active {
+  background-color: var(--priority-low-bg);
+  border-color: var(--priority-low);
+  color: var(--priority-low);
+}
+
+.filter-chip--priority-medium.filter-chip--active {
+  background-color: var(--priority-medium-bg);
+  border-color: var(--priority-medium);
+  color: var(--priority-medium);
+}
+
+.filter-chip--priority-high.filter-chip--active {
+  background-color: var(--priority-high-bg);
+  border-color: var(--priority-high);
+  color: var(--priority-high);
+}
+
+/* ── Assignee select ── */
+
+.filter-bar__select {
+  height: 26px;
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-default);
+  background-color: var(--bg-surface);
+  font-size: var(--text-xs);
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: border-color var(--transition-fast);
+}
+
+.filter-bar__select:focus {
+  outline: none;
+  border-color: var(--border-focus);
+}
+
+/* ── Date inputs ── */
+
+.filter-bar__date-label {
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+  white-space: nowrap;
+}
+
+.filter-bar__date {
+  height: 26px;
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-default);
+  background-color: var(--bg-surface);
+  font-size: var(--text-xs);
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: border-color var(--transition-fast);
+}
+
+.filter-bar__date:focus {
+  outline: none;
+  border-color: var(--border-focus);
+}
+
+/* ── Overdue toggle ── */
+
+.filter-bar__toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.filter-bar__toggle input[type='checkbox'] {
+  accent-color: var(--danger-default);
+  cursor: pointer;
+}
+
+/* ── Clear button ── */
+
+.filter-bar__clear {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-full);
+  border: 1px solid var(--danger-default);
+  background: none;
+  font-size: var(--text-xs);
+  color: var(--danger-default);
+  cursor: pointer;
+  margin-left: auto;
+  transition:
+    background-color var(--transition-fast),
+    color var(--transition-fast);
+}
+
+.filter-bar__clear:hover {
+  background-color: var(--danger-subtle);
+}
+
+/* ── Reduced motion ── */
+
+@media (prefers-reduced-motion: reduce) {
+  .filter-chip,
+  .filter-bar__select,
+  .filter-bar__date,
+  .filter-bar__clear {
+    transition: none;
+  }
+}

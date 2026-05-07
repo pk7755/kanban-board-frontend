@@ -1,0 +1,125 @@
+/*
+ * Toast.css
+ * Fixed toast stack at bottom-right with slide-in keyframe animation.
+ * Hover pauses auto-dismiss (handled in JS); animation is purely CSS.
+ */
+
+/* ─── Stack container ────────────────────────────────────────────── */
+
+.toast-stack {
+  position: fixed;
+  bottom: var(--space-6);
+  right: var(--space-6);
+  z-index: var(--z-toast);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  width: 340px;
+  max-width: calc(100vw - var(--space-8));
+  pointer-events: none; /* let clicks fall through to empty area */
+}
+
+/* ─── Individual toast ───────────────────────────────────────────── */
+
+.toast {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-lg);
+  background-color: var(--bg-surface-raised);
+  border: 1px solid var(--border-default);
+  box-shadow: var(--shadow-lg);
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+  pointer-events: all;
+
+  /* slide-in from the right */
+  animation: toast-slide-in var(--transition-spring) both;
+}
+
+@keyframes toast-slide-in {
+  from {
+    opacity: 0;
+    transform: translateX(110%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* ─── Variants ───────────────────────────────────────────────────── */
+
+.toast--success .toast__icon { color: var(--success-default); }
+.toast--error   .toast__icon { color: var(--danger-default);  }
+.toast--warning .toast__icon { color: var(--warning-default); }
+.toast--info    .toast__icon { color: var(--accent-default);  }
+
+.toast--success { border-left: 3px solid var(--success-default); }
+.toast--error   { border-left: 3px solid var(--danger-default);  }
+.toast--warning { border-left: 3px solid var(--warning-default); }
+.toast--info    { border-left: 3px solid var(--accent-default);  }
+
+/* ─── Parts ──────────────────────────────────────────────────────── */
+
+.toast__icon {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+}
+
+.toast__message {
+  flex: 1;
+  line-height: var(--line-height-normal);
+}
+
+.toast__action {
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--accent-default);
+  cursor: pointer;
+  transition: background-color var(--transition-fast);
+  white-space: nowrap;
+}
+
+.toast__action:hover {
+  background-color: var(--accent-subtle);
+}
+
+.toast__close {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  padding: var(--space-1);
+  border-radius: var(--radius-sm);
+  color: var(--text-tertiary);
+  cursor: pointer;
+  transition:
+    background-color var(--transition-fast),
+    color var(--transition-fast);
+}
+
+.toast__close:hover {
+  background-color: var(--bg-muted);
+  color: var(--text-primary);
+}
+
+/* ─── Mobile ─────────────────────────────────────────────────────── */
+
+@media (max-width: 480px) {
+  .toast-stack {
+    bottom: var(--space-4);
+    right: var(--space-4);
+    left: var(--space-4);
+    width: auto;
+  }
+}

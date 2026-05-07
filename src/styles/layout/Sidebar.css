@@ -80,22 +80,102 @@
   border-top: 1px solid var(--border-default);
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
+  gap: var(--space-1);
 }
 
-.sidebar__user {
+.sidebar__profile-link {
+  font-size: var(--text-sm);
+  font-weight: var(--font-weight-medium);
   display: flex;
   align-items: center;
   gap: var(--space-2);
 }
 
-.sidebar__user-name {
-  font-size: var(--text-sm);
-  font-weight: var(--font-weight-medium);
-  color: var(--text-primary);
+.sidebar__avatar {
+  width: 24px;
+  height: 24px;
+  border-radius: var(--radius-full, 9999px);
+  background: var(--color-primary-200);
+  color: var(--color-primary-800);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  overflow: hidden;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.sidebar__avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.sidebar__avatar-initials {
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
 }
 
 .sidebar__user-role {
   font-size: var(--text-xs);
   color: var(--text-tertiary);
+  padding-left: var(--space-2);
+}
+
+.sidebar__new-board {
+  margin-top: var(--space-2);
+  width: 100%;
+  justify-content: flex-start;
+}
+
+/* Board list item row — relative so the delete button can be positioned */
+.sidebar__board-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.sidebar__board-item .sidebar__nav-item {
+  flex: 1;
+  min-width: 0;
+}
+
+.sidebar__board-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Delete button — hidden until row is hovered */
+.sidebar__board-delete {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  margin-right: var(--space-1);
+  border-radius: var(--radius-sm);
+  border: none;
+  background: none;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  opacity: 0;
+  transition:
+    opacity var(--transition-fast),
+    color var(--transition-fast),
+    background-color var(--transition-fast);
+}
+
+.sidebar__board-item:hover .sidebar__board-delete,
+.sidebar__board-item:focus-within .sidebar__board-delete {
+  opacity: 1;
+}
+
+.sidebar__board-delete:hover {
+  color: var(--color-danger-600);
+  background-color: var(--color-danger-50);
 }

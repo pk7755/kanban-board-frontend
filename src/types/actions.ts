@@ -62,6 +62,7 @@ export type BoardAction =
 
 export type AuthAction =
   | { type: 'LOGIN'; payload: { user: import('./entities').AuthUser } }
+  | { type: 'UPDATE_PROFILE'; payload: { name: string; email: string; avatarUrl?: string } }
   | { type: 'LOGOUT' }
 
 /* ─── UI / app-level actions ──────────────────────────────────────── */
