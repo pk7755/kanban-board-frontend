@@ -8,6 +8,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Copy, Plus, RefreshCw, Trash2, UserX } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
+import { ConfirmModal } from '@/components/ui/ConfirmModal'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { useAuth } from '@/context/AuthContext'
 import { useDebounce } from '@/hooks/useDebounce'
@@ -61,14 +62,13 @@ export function UsersPage() {
   const [formErrors, setFormErrors] = useState<Partial<UserFormState>>({})
   const dialogRef = useRef<HTMLDialogElement>(null)
 
-  // Deactivate confirmation dialog
+  // Deactivate confirmation
   const [deactivateTarget, setDeactivateTarget] = useState<User | null>(null)
-  const deactivateDialogRef = useRef<HTMLDialogElement>(null)
+  const [isDeactivating, setIsDeactivating] = useState(false)
 
-  // Delete confirmation dialog
+  // Delete confirmation
   const [deleteTarget, setDeleteTarget] = useState<User | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
-  const deleteDialogRef = useRef<HTMLDialogElement>(null)
 
   // Reset password dialog
   const [resetTarget, setResetTarget] = useState<User | null>(null)
@@ -112,25 +112,11 @@ export function UsersPage() {
   }, [dialogMode])
 
   useEffect(() => {
-    const dialog = deactivateDialogRef.current
-    if (!dialog) return
-    if (deactivateTarget && !dialog.open) dialog.showModal()
-    if (!deactivateTarget && dialog.open) dialog.close()
-  }, [deactivateTarget])
-
-  useEffect(() => {
     const dialog = resetDialogRef.current
     if (!dialog) return
     if (resetTarget && !dialog.open) dialog.showModal()
     if (!resetTarget && dialog.open) dialog.close()
   }, [resetTarget])
-
-  useEffect(() => {
-    const dialog = deleteDialogRef.current
-    if (!dialog) return
-    if (deleteTarget && !dialog.open) dialog.showModal()
-    if (!deleteTarget && dialog.open) dialog.close()
-  }, [deleteTarget])
 
   /* ── Form validation ── */
   function validateForm(): boolean {
@@ -166,11 +152,16 @@ export function UsersPage() {
   /* ── Deactivate ── */
   const handleDeactivate = async () => {
     if (!deactivateTarget) return
-    await usersApi.deactivate(deactivateTarget.id)
-    setUsers((prev) =>
-      prev.map((u) => (u.id === deactivateTarget.id ? { ...u, active: false } : u)),
-    )
-    setDeactivateTarget(null)
+    setIsDeactivating(true)
+    try {
+      await usersApi.deactivate(deactivateTarget.id)
+      setUsers((prev) =>
+        prev.map((u) => (u.id === deactivateTarget.id ? { ...u, isActive: false } : u)),
+      )
+      setDeactivateTarget(null)
+    } finally {
+      setIsDeactivating(false)
+    }
   }
 
   /* ── Delete ── */
@@ -207,8 +198,8 @@ export function UsersPage() {
     const q = searchQuery.toLowerCase()
     if (q && !u.name.toLowerCase().includes(q) && !u.email.toLowerCase().includes(q)) return false
     if (roleFilter !== 'ALL' && u.role !== roleFilter) return false
-    if (activeFilter === 'ACTIVE' && !u.active) return false
-    if (activeFilter === 'INACTIVE' && u.active) return false
+    if (activeFilter === 'ACTIVE' && !u.isActive) return false
+    if (activeFilter === 'INACTIVE' && u.isActive) return false
     return true
   })
 
@@ -296,8 +287,8 @@ export function UsersPage() {
                     <td>{user.email}</td>
                     <td>{user.role === 'MANAGER' ? 'Manager' : 'Team Member'}</td>
                     <td>
-                      <span className={`users-page__status-badge users-page__status-badge--${user.active ? 'active' : 'inactive'}`}>
-                        {user.active ? 'Active' : 'Inactive'}
+                      <span className={`users-page__status-badge users-page__status-badge--${user.isActive ? 'active' : 'inactive'}`}>
+                        {user.isActive ? 'Active' : 'Inactive'}
                       </span>
                     </td>
                     <td>
@@ -310,7 +301,7 @@ export function UsersPage() {
                         <Button variant="ghost" size="sm" onClick={() => openEditDialog(user)} aria-label={`Edit ${user.name}`}>
                           Edit
                         </Button>
-                        {user.active && user.id !== currentUserId && (
+                        {user.isActive && user.id !== currentUserId && (
                           <Button
                             variant="ghost"
                             size="sm"
@@ -440,39 +431,41 @@ export function UsersPage() {
         </form>
       </dialog>
 
-      {/* ── Deactivate confirmation dialog ── */}
-      <dialog ref={deactivateDialogRef} className="users-page__dialog" aria-label="Confirm deactivation">
-        <h2 className="users-page__dialog-title">Deactivate Member</h2>
-        <p style={{ color: 'var(--text-secondary)', margin: '0 0 var(--space-5)' }}>
-          Are you sure you want to deactivate{' '}
-          <strong>{deactivateTarget?.name}</strong>? They will lose access immediately.
-        </p>
-        <div className="users-page__dialog-actions">
-          <Button variant="danger" onClick={() => { void handleDeactivate() }}>
-            Deactivate
-          </Button>
-          <Button variant="ghost" onClick={() => setDeactivateTarget(null)}>
-            Cancel
-          </Button>
-        </div>
-      </dialog>
+      {/* ── Deactivate confirmation — reusable ConfirmModal ── */}
+      {deactivateTarget && (
+        <ConfirmModal
+          title="Deactivate Member"
+          message={
+            <>
+              Are you sure you want to deactivate{' '}
+              <strong>{deactivateTarget.name}</strong>? They will lose access immediately.
+            </>
+          }
+          confirmLabel={isDeactivating ? 'Deactivating…' : 'Deactivate'}
+          variant="danger"
+          isLoading={isDeactivating}
+          onConfirm={() => { void handleDeactivate() }}
+          onCancel={() => setDeactivateTarget(null)}
+        />
+      )}
 
-      {/* ── Delete confirmation dialog ── */}
-      <dialog ref={deleteDialogRef} className="users-page__dialog" aria-label="Confirm deletion">
-        <h2 className="users-page__dialog-title">Delete Member</h2>
-        <p style={{ color: 'var(--text-secondary)', margin: '0 0 var(--space-5)' }}>
-          Are you sure you want to permanently delete{' '}
-          <strong>{deleteTarget?.name}</strong>? This action cannot be undone.
-        </p>
-        <div className="users-page__dialog-actions">
-          <Button variant="danger" onClick={() => { void handleDelete() }} disabled={isDeleting}>
-            {isDeleting ? 'Deleting…' : 'Delete'}
-          </Button>
-          <Button variant="ghost" onClick={() => setDeleteTarget(null)} disabled={isDeleting}>
-            Cancel
-          </Button>
-        </div>
-      </dialog>
+      {/* ── Delete confirmation — reusable ConfirmModal ── */}
+      {deleteTarget && (
+        <ConfirmModal
+          title="Delete Member"
+          message={
+            <>
+              Are you sure you want to permanently delete{' '}
+              <strong>{deleteTarget.name}</strong>? This action cannot be undone.
+            </>
+          }
+          confirmLabel={isDeleting ? 'Deleting…' : 'Delete'}
+          variant="danger"
+          isLoading={isDeleting}
+          onConfirm={() => { void handleDelete() }}
+          onCancel={() => setDeleteTarget(null)}
+        />
+      )}
 
       {/* ── Reset password result dialog ── */}
       <dialog ref={resetDialogRef} className="users-page__dialog" aria-label="Temporary password">
@@ -497,7 +490,7 @@ export function UsersPage() {
         ) : (
           <Skeleton height="42px" />
         )}
-        <div className="users-page__dialog-actions" style={{ marginTop: 'var(--space-5)' }}>
+        <div className="users-page__dialog-actions" style={{ marginTop: 'var(--space-4)' }}>
           <Button
             variant="primary"
             onClick={() => { setResetTarget(null); setTempPassword(null) }}
@@ -509,4 +502,3 @@ export function UsersPage() {
     </main>
   )
 }
-

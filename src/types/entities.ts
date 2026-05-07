@@ -21,7 +21,7 @@ export interface User {
   name: string
   email: string
   role: Role
-  active: boolean
+  isActive: boolean
   avatarUrl?: string
   readonly createdAt: string
 }

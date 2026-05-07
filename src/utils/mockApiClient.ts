@@ -26,7 +26,7 @@ const MOCK_USERS: User[] = [
     name: 'Pradyuman',
     email: 'manager@test.com',
     role: 'MANAGER',
-    active: true,
+    isActive: true,
     createdAt: '2024-01-01T00:00:00.000Z',
   },
   {
@@ -34,7 +34,7 @@ const MOCK_USERS: User[] = [
     name: 'Team Member',
     email: 'member@test.com',
     role: 'TEAM_MEMBER',
-    active: true,
+    isActive: true,
     createdAt: '2024-01-01T00:00:00.000Z',
   },
 ]
@@ -339,7 +339,7 @@ export const usersApi = {
       name: data.name ?? '',
       email: data.email ?? '',
       role: data.role ?? 'TEAM_MEMBER',
-      active: true,
+      isActive: true,
       createdAt: new Date().toISOString(),
     }
     upsertUser(user)
@@ -362,7 +362,7 @@ export const usersApi = {
   deactivate: (userId: string, _options?: RequestOptions) => {
     const user = allUsers().find((u) => u.id === userId)
     if (!user) mockError('User not found', 404)
-    upsertUser({ ...user!, active: false })
+    upsertUser({ ...user!, isActive: false })
     return delay(undefined as unknown as void)
   },
 

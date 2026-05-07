@@ -1,0 +1,91 @@
+/**
+ * ConfirmModal.css
+ * Shared confirmation dialog styling used across the app.
+ * Mirrors the board-page__dialog pattern but adds entry animation.
+ */
+
+/* ─── Keyframes ───────────────────────────────────────────────────── */
+
+@keyframes confirm-modal-in {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes confirm-backdrop-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* ─── Dialog shell ────────────────────────────────────────────────── */
+
+.confirm-modal {
+  /* Reset browser defaults */
+  padding: 0;
+  border: none;
+  background: transparent;
+  /* Centre in viewport */
+  margin: auto;
+  /* Size */
+  width: min(440px, 92vw);
+  /* Entry animation */
+  animation: confirm-modal-in 200ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* Semi-opaque dark backdrop — matches --bg-overlay token */
+.confirm-modal::backdrop {
+  background-color: var(--bg-overlay);
+  animation: confirm-backdrop-in 180ms ease both;
+}
+
+/* ─── Inner card ──────────────────────────────────────────────────── */
+
+.confirm-modal__content {
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-xl);
+  padding: var(--space-6);
+  box-shadow: var(--shadow-xl);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+/* ─── Typography ──────────────────────────────────────────────────── */
+
+.confirm-modal__title {
+  font-size: var(--text-xl);
+  font-weight: var(--font-weight-semibold);
+  margin: 0;
+}
+
+.confirm-modal__message {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  line-height: var(--line-height-relaxed);
+  margin: 0;
+}
+
+/* ─── Actions row ─────────────────────────────────────────────────── */
+
+.confirm-modal__actions {
+  display: flex;
+  gap: var(--space-3);
+  justify-content: flex-end;
+  margin-top: var(--space-2);
+}
+
+/* ─── Reduced motion ──────────────────────────────────────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+  .confirm-modal,
+  .confirm-modal::backdrop {
+    animation: none;
+  }
+}
