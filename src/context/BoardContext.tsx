@@ -29,7 +29,7 @@ import type {
 import { boardsApi, tasksApi, tagsApi } from '@/utils/api'
 import { loadState, saveState, STORAGE_VERSION } from '@/utils/storage'
 
-interface BoardState {
+export interface BoardState {
   boards: Board[]
   tasks: TaskMap
   activeBoardId: string | null
@@ -56,7 +56,7 @@ interface BoardContextValue {
   lastUndoDescription: string
 }
 
-type InternalBoardAction =
+export type InternalBoardAction =
   | BoardAction
   | { type: 'HYDRATE_BOARD_TASKS'; payload: { boardId: string; tasks: Task[] } }
   | {
@@ -178,7 +178,7 @@ function hydrateBoardTasks(state: BoardState, boardId: string, tasks: Task[]): B
   }
 }
 
-function boardReducer(state: BoardState, action: InternalBoardAction): BoardState {
+export function boardReducer(state: BoardState, action: InternalBoardAction): BoardState {
   switch (action.type) {
     case 'SET_LOADING':
       return { ...state, isLoading: action.payload.isLoading }
