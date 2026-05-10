@@ -48,7 +48,8 @@ function BoardPageInner() {
   const navigate = useNavigate()
   const { boardId } = useParams<{ boardId?: string }>()
   const { state: authState } = useAuth()
-  const { state, dispatch, activeBoard, activeTasks } = useBoardContext()
+  const { state, dispatch, activeBoard, activeTasks, retryLoadBoards, loadBoardTasks } =
+    useBoardContext()
   const { searchQuery, newBoardDialogOpen, closeNewBoardDialog, openNewBoardDialog } =
     useSearchContext()
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null)
@@ -404,6 +405,36 @@ function BoardPageInner() {
     return <Navigate to={`/boards/${state.boards[0].id}`} replace />
   }
 
+  if (state.isLoading) {
+    return (
+      <div className="board-page board-page--loading">
+        <Skeleton height="2.75rem" width="18rem" />
+        <div className="board-page__skeleton-columns">
+          <Skeleton className="board-page__column-skeleton" height="24rem" />
+          <Skeleton className="board-page__column-skeleton" height="24rem" />
+          <Skeleton className="board-page__column-skeleton" height="24rem" />
+        </div>
+      </div>
+    )
+  }
+
+  if (state.error && state.boards.length === 0) {
+    return (
+      <div className="board-page board-page--empty">
+        <EmptyState
+          icon={<FolderKanban size={28} aria-hidden="true" />}
+          title="Failed to load boards"
+          description={state.error}
+          action={
+            <Button variant="primary" onClick={() => void retryLoadBoards()}>
+              Retry
+            </Button>
+          }
+        />
+      </div>
+    )
+  }
+
   if (!state.isLoading && state.boards.length === 0) {
     return (
       <div className="board-page board-page--empty">
@@ -462,19 +493,6 @@ function BoardPageInner() {
             </div>
           </form>
         </dialog>
-      </div>
-    )
-  }
-
-  if (state.isLoading) {
-    return (
-      <div className="board-page board-page--loading">
-        <Skeleton height="2.75rem" width="18rem" />
-        <div className="board-page__skeleton-columns">
-          <Skeleton className="board-page__column-skeleton" height="24rem" />
-          <Skeleton className="board-page__column-skeleton" height="24rem" />
-          <Skeleton className="board-page__column-skeleton" height="24rem" />
-        </div>
       </div>
     )
   }
@@ -555,7 +573,18 @@ function BoardPageInner() {
               <Tag size={14} aria-hidden="true" />
               {activeBoard.tags.length} {activeBoard.tags.length === 1 ? 'tag' : 'tags'}
             </button>
-            {state.error ? <span className="board-page__error">{state.error}</span> : null}
+            {state.error ? (
+              <span className="board-page__error">
+                {state.error}
+                <button
+                  type="button"
+                  className="board-page__retry-btn"
+                  onClick={() => void loadBoardTasks(activeBoard.id)}
+                >
+                  Retry
+                </button>
+              </span>
+            ) : null}
           </div>
         </div>
 

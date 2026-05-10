@@ -1,0 +1,167 @@
+.sidebar__nav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.sidebar__nav-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition:
+    background-color var(--transition-fast),
+    color var(--transition-fast);
+  text-decoration: none;
+  border: none;
+  background: none;
+  width: 100%;
+  text-align: left;
+}
+
+.sidebar__nav-item:hover {
+  background-color: var(--bg-subtle);
+  color: var(--text-primary);
+}
+
+.sidebar__nav-item--active {
+  background-color: var(--accent-subtle);
+  color: var(--accent-default);
+  font-weight: var(--font-weight-medium);
+}
+
+/* Pushes the footer to the bottom of the flex column */
+.sidebar__footer {
+  margin-top: auto;
+  padding: var(--space-3) var(--space-4);
+  border-top: 1px solid var(--border-default);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  flex-shrink: 0;
+}
+
+.sidebar__profile-link {
+  font-size: var(--text-sm);
+  font-weight: var(--font-weight-medium);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.sidebar__avatar {
+  width: 24px;
+  height: 24px;
+  border-radius: var(--radius-full, 9999px);
+  background: var(--color-primary-200);
+  color: var(--color-primary-800);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  overflow: hidden;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.sidebar__avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.sidebar__avatar-initials {
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.sidebar__user-role {
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+  padding-left: var(--space-2);
+}
+
+.sidebar__new-board {
+  margin-top: var(--space-2);
+  width: 100%;
+  justify-content: flex-start;
+}
+
+.sidebar__logout-btn {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-1);
+  padding: var(--space-1) var(--space-2);
+  background: none;
+  border: none;
+  border-radius: var(--radius-md);
+  color: var(--text-tertiary);
+  font-size: var(--text-sm);
+  cursor: pointer;
+  width: 100%;
+  text-align: left;
+  transition:
+    background 0.15s,
+    color 0.15s;
+}
+
+.sidebar__logout-btn:hover {
+  background: var(--color-danger-50, rgba(239, 68, 68, 0.08));
+  color: var(--color-danger);
+}
+
+/* Board list item row — relative so the delete button can be positioned */
+.sidebar__board-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.sidebar__board-item .sidebar__nav-item {
+  flex: 1;
+  min-width: 0;
+}
+
+.sidebar__board-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Delete button — hidden until row is hovered */
+.sidebar__board-delete {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  margin-right: var(--space-1);
+  border-radius: var(--radius-sm);
+  border: none;
+  background: none;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  opacity: 0;
+  transition:
+    opacity var(--transition-fast),
+    color var(--transition-fast),
+    background-color var(--transition-fast);
+}
+
+.sidebar__board-item:hover .sidebar__board-delete,
+.sidebar__board-item:focus-within .sidebar__board-delete {
+  opacity: 1;
+}
+
+.sidebar__board-delete:hover {
+  color: var(--color-danger-600);
+  background-color: var(--color-danger-50);
+}

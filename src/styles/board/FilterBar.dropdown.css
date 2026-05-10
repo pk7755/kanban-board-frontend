@@ -1,0 +1,100 @@
+/* ── Dropdown panel ─────────────────────────────────────────────── */
+
+.fbar-group__dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 200;
+  min-width: 180px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  box-shadow:
+    0 8px 24px rgba(0, 0, 0, 0.12),
+    0 2px 6px rgba(0, 0, 0, 0.06);
+  overflow: hidden;
+  padding: var(--space-1) 0;
+}
+
+/* ── Checkbox option row ────────────────────────────────────────── */
+
+.fbar-option {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 7px var(--space-4);
+  cursor: pointer;
+  transition: background 80ms ease;
+  user-select: none;
+}
+.fbar-option:hover {
+  background: var(--bg-subtle);
+}
+.fbar-option--checked {
+  background: var(--accent-subtle);
+}
+.fbar-option--checked:hover {
+  background: var(--accent-subtle);
+  filter: brightness(0.97);
+}
+
+.fbar-option__checkbox {
+  width: 15px;
+  height: 15px;
+  accent-color: var(--accent-default);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.fbar-option__dot {
+  width: 10px;
+  height: 10px;
+  border-radius: var(--radius-full);
+  flex-shrink: 0;
+}
+
+.fbar-option__label {
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+  flex: 1;
+}
+.fbar-option--checked .fbar-option__label {
+  font-weight: var(--font-weight-semibold);
+  color: var(--accent-default);
+}
+
+/* ── "Clear X" button inside dropdown ──────────────────────────── */
+
+.fbar-group__clear-btn {
+  display: block;
+  width: 100%;
+  padding: 6px var(--space-4);
+  border: none;
+  border-top: 1px solid var(--border-default);
+  background: transparent;
+  color: var(--text-tertiary);
+  font-size: var(--text-xs);
+  text-align: left;
+  cursor: pointer;
+  transition:
+    background 80ms ease,
+    color 80ms ease;
+  margin-top: var(--space-1);
+}
+.fbar-group__clear-btn:hover {
+  background: var(--bg-subtle);
+  color: var(--text-primary);
+}
+
+/* ── Responsive ─────────────────────────────────────────────────── */
+
+@media (max-width: 600px) {
+  .filter-bar {
+    padding: var(--space-2) var(--space-3);
+    gap: var(--space-1);
+  }
+  .fbar-group__dropdown {
+    left: auto;
+    right: 0;
+  }
+}

@@ -4,6 +4,7 @@ import { useAuth } from '@/context/AuthContext'
 import { usersApi } from '@/utils/api'
 import { useToast } from '@/context/ToastContext'
 import '@/styles/pages/ProfilePage.css'
+import '@/styles/pages/ProfilePage.form.css'
 
 /* ─── Password strength ───────────────────────────────────────────── */
 

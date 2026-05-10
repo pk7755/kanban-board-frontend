@@ -17,6 +17,7 @@ import { createPortal } from 'react-dom'
 import { Plus } from 'lucide-react'
 import type { Tag } from '@/types/entities'
 import '@/styles/components/TagPicker.css'
+import '@/styles/components/TagPicker.dropdown.css'
 
 const COLOR_PALETTE = [
   '#6366f1',

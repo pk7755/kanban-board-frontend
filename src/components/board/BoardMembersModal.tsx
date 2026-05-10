@@ -9,6 +9,7 @@ import { UserPlus, UserMinus, X } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import type { BoardMember } from '@/types/entities'
 import '@/styles/components/BoardMembersModal.css'
+import '@/styles/components/BoardMembersModal.list.css'
 
 export interface BoardMembersModalProps {
   boardId: string

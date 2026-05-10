@@ -44,6 +44,8 @@ interface BoardContextValue {
   activeTasks: Task[]
   /** Imperatively fetch and hydrate tasks for any board (e.g. on navigation) */
   loadBoardTasks: (boardId: string) => Promise<void>
+  /** Retry the initial boards list fetch after a network error */
+  retryLoadBoards: () => Promise<void>
   /** Undo the last undoable action (MOVE_TASK, DELETE_TASK, UPDATE_TASK) */
   undo: () => void
   /** Redo the last undone action */
@@ -146,13 +148,12 @@ function removeTaskId(taskIds: string[], taskId: string): string[] {
 }
 
 function hydrateBoardTasks(state: BoardState, boardId: string, tasks: Task[]): BoardState {
-  const nextTasks = Object.fromEntries(
-    Object.entries(state.tasks).filter(([, task]) => task.boardId !== boardId),
-  ) as TaskMap
-
-  for (const task of tasks) {
-    nextTasks[task.id] = task
-  }
+  const nextTasks = {
+    ...Object.fromEntries(
+      Object.entries(state.tasks).filter(([, task]) => task.boardId !== boardId),
+    ),
+    ...Object.fromEntries(tasks.map((task) => [task.id, task])),
+  } as TaskMap
 
   const groupedByColumn = new Map<string, string[]>()
   tasks
@@ -531,39 +532,37 @@ function createInitialState(): BoardState {
 export function BoardProvider({ children }: { children: ReactNode }) {
   const [state, internalDispatch] = useReducer(boardReducer, undefined, createInitialState)
 
-  useEffect(() => {
-    let cancelled = false
+  const retryLoadBoards = useCallback(async () => {
+    internalDispatch({ type: 'SET_LOADING', payload: { isLoading: true } })
+    internalDispatch({ type: 'SET_ERROR', payload: { error: null } })
 
-    async function loadBoards() {
-      internalDispatch({ type: 'SET_LOADING', payload: { isLoading: true } })
-      internalDispatch({ type: 'SET_ERROR', payload: { error: null } })
+    try {
+      const response = await boardsApi.list()
+      const boards = response.data.map((board) => ({
+        ...board,
+        columns: sortColumns(board.columns).map((column) => ({ ...column, taskIds: [] })),
+      }))
+      internalDispatch({ type: 'SET_BOARDS', payload: { boards } })
 
-      try {
-        const response = await boardsApi.list()
-        if (cancelled) return
-        const boards = response.data.map((board) => ({
-          ...board,
-          columns: sortColumns(board.columns).map((column) => ({ ...column, taskIds: [] })),
-        }))
-        internalDispatch({ type: 'SET_BOARDS', payload: { boards } })
+      const nextActiveBoardId = boards.some((board) => board.id === state.activeBoardId)
+        ? state.activeBoardId
+        : (boards[0]?.id ?? null)
 
-        const nextActiveBoardId = boards.some((board) => board.id === state.activeBoardId)
-          ? state.activeBoardId
-          : (boards[0]?.id ?? null)
-
-        internalDispatch({ type: 'SET_ACTIVE_BOARD_ID', payload: { boardId: nextActiveBoardId } })
-        if (!nextActiveBoardId) {
-          internalDispatch({ type: 'SET_LOADING', payload: { isLoading: false } })
-        }
-      } catch {
-        if (cancelled) return
-        internalDispatch({ type: 'SET_ERROR', payload: { error: 'Unable to load boards.' } })
+      internalDispatch({ type: 'SET_ACTIVE_BOARD_ID', payload: { boardId: nextActiveBoardId } })
+      if (!nextActiveBoardId) {
         internalDispatch({ type: 'SET_LOADING', payload: { isLoading: false } })
       }
+    } catch {
+      internalDispatch({ type: 'SET_ERROR', payload: { error: 'Unable to load boards.' } })
+      internalDispatch({ type: 'SET_LOADING', payload: { isLoading: false } })
     }
+  }, [state.activeBoardId])
 
-    void loadBoards()
-
+  useEffect(() => {
+    let cancelled = false
+    void retryLoadBoards().finally(() => {
+      if (cancelled) internalDispatch({ type: 'SET_LOADING', payload: { isLoading: false } })
+    })
     return () => {
       cancelled = true
     }
@@ -700,6 +699,7 @@ export function BoardProvider({ children }: { children: ReactNode }) {
       activeBoard,
       activeTasks,
       loadBoardTasks,
+      retryLoadBoards,
       undo,
       redo,
       canUndo,
@@ -714,6 +714,7 @@ export function BoardProvider({ children }: { children: ReactNode }) {
       dispatch,
       lastUndoDescription,
       loadBoardTasks,
+      retryLoadBoards,
       redo,
       state,
       undo,

@@ -11,6 +11,7 @@ import { useFilter } from '@/context/FilterContext'
 import { PRIORITIES } from '@/types/entities'
 import type { BoardMember, Column, Tag } from '@/types/entities'
 import '@/styles/board/FilterBar.css'
+import '@/styles/board/FilterBar.dropdown.css'
 
 interface FilterBarProps {
   boardMembers: ReadonlyArray<BoardMember>

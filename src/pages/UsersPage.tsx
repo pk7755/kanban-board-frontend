@@ -16,6 +16,7 @@ import type { Role, User } from '@/types/entities'
 import { ROLES } from '@/types/entities'
 import { usersApi } from '@/utils/api'
 import '@/styles/pages/UsersPage.css'
+import '@/styles/pages/UsersPage.table.css'
 
 /* ─── Password strength ─────────────────────────────────────────── */
 
@@ -50,6 +51,7 @@ export function UsersPage() {
 
   const [users, setUsers] = useState<User[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
   const [searchInput, setSearchInput] = useState('')
   const searchQuery = useDebounce(searchInput, 300)
   const [roleFilter, setRoleFilter] = useState<Role | 'ALL'>('ALL')
@@ -78,11 +80,40 @@ export function UsersPage() {
   const resetDialogRef = useRef<HTMLDialogElement>(null)
 
   /* ── Load users ── */
+  const fetchUsers = () => {
+    setIsLoading(true)
+    setLoadError(null)
+    usersApi
+      .list()
+      .then((res) => {
+        setUsers(res.data)
+      })
+      .catch(() => {
+        setLoadError('Unable to load team members.')
+      })
+      .finally(() => {
+        setIsLoading(false)
+      })
+  }
+
   useEffect(() => {
-    usersApi.list().then((res) => {
-      setUsers(res.data)
-      setIsLoading(false)
-    })
+    let isCancelled = false
+
+    usersApi
+      .list()
+      .then((res) => {
+        if (!isCancelled) setUsers(res.data)
+      })
+      .catch(() => {
+        if (!isCancelled) setLoadError('Unable to load team members.')
+      })
+      .finally(() => {
+        if (!isCancelled) setIsLoading(false)
+      })
+
+    return () => {
+      isCancelled = true
+    }
   }, [])
 
   /* ── Dialog open/close helpers ── */
@@ -270,6 +301,13 @@ export function UsersPage() {
           {[0, 1, 2].map((i) => (
             <Skeleton key={i} height="48px" />
           ))}
+        </div>
+      ) : loadError ? (
+        <div className="users-page__load-error" role="alert">
+          <p>{loadError}</p>
+          <Button variant="secondary" onClick={fetchUsers}>
+            Retry
+          </Button>
         </div>
       ) : (
         <div className="users-page__table-wrap" role="region" aria-label="Team members table">

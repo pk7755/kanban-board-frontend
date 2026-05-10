@@ -10,6 +10,7 @@ import { useBoardContext } from '@/context/BoardContext'
 import { tagsApi } from '@/utils/api'
 import type { Tag } from '@/types/entities'
 import '@/styles/components/ManageTagsModal.css'
+import '@/styles/components/ManageTagsModal.form.css'
 
 /* ── Preset palette ─────────────────────────────────────────────── */
 const COLOR_PALETTE = [

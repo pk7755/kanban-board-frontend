@@ -14,6 +14,7 @@ import { useDragContext } from '@/context/DragContext'
 import type { Column as ColumnEntity, Task, TaskMap, UserMap } from '@/types/entities'
 import { columnsApi, tasksApi } from '@/utils/api'
 import '@/styles/board/Column.css'
+import '@/styles/board/Column.drop.css'
 
 interface ColumnProps {
   column: ColumnEntity
@@ -118,11 +119,11 @@ export function Column({
     const body = bodyRef.current
     if (!body) return filteredTasks.length
     const cards = Array.from(body.querySelectorAll<HTMLElement>('[data-task-id]'))
-    for (let i = 0; i < cards.length; i++) {
-      const rect = cards[i].getBoundingClientRect()
-      if (e.clientY < rect.top + rect.height / 2) return i
-    }
-    return filteredTasks.length
+    const found = cards.findIndex((card) => {
+      const rect = card.getBoundingClientRect()
+      return e.clientY < rect.top + rect.height / 2
+    })
+    return found === -1 ? filteredTasks.length : found
   }
 
   function handleDragEnter(e: React.DragEvent) {

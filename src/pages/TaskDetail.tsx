@@ -21,6 +21,8 @@ import { tasksApi } from '@/utils/api'
 import { tasksApi as tasksApiDirect } from '@/utils/apiClient'
 import '@/styles/components/Input.css'
 import '@/styles/pages/TaskDetail.css'
+import '@/styles/pages/TaskDetail.form.css'
+import '@/styles/pages/TaskDetail.checklist.css'
 
 interface TaskDetailProps {
   taskId: string

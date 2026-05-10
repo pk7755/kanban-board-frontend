@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/Button'
 import { ConfirmModal } from '@/components/ui/ConfirmModal'
 import type { Board } from '@/types/entities'
 import '@/styles/layout/Sidebar.css'
+import '@/styles/layout/Sidebar.nav.css'
 
 interface SidebarProps {
   boards: Board[]

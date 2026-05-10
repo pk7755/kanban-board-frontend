@@ -12,6 +12,7 @@ import { useDragContext } from '@/context/DragContext'
 import type { Task, UserMap } from '@/types/entities'
 import { tasksApi } from '@/utils/api'
 import '@/styles/board/TaskCard.css'
+import '@/styles/board/TaskCard.detail.css'
 
 interface TaskCardProps {
   task: Task

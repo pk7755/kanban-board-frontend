@@ -418,15 +418,17 @@ export const tagsApi = {
   update: (tagId: string, data: Partial<Tag>, _options?: RequestOptions) => {
     // Tags are stored per-board; scan all board-tag stores
     const keys = Object.keys(localStorage).filter((k) => k.startsWith('kanban:tags:'))
-    for (const key of keys) {
+    const matchKey = keys.find((key) => {
       const tags: Tag[] = JSON.parse(localStorage.getItem(key) ?? '[]') as Tag[]
+      return tags.some((t) => t.id === tagId)
+    })
+    if (matchKey) {
+      const tags: Tag[] = JSON.parse(localStorage.getItem(matchKey) ?? '[]') as Tag[]
       const idx = tags.findIndex((t) => t.id === tagId)
-      if (idx !== -1) {
-        const updated = { ...tags[idx], ...data }
-        tags[idx] = updated
-        localStorage.setItem(key, JSON.stringify(tags))
-        return delay(ok(updated))
-      }
+      const updated = { ...tags[idx], ...data }
+      const next = tags.map((t, i) => (i === idx ? updated : t))
+      localStorage.setItem(matchKey, JSON.stringify(next))
+      return delay(ok(updated))
     }
     mockError('Tag not found', 404)
     // unreachable, but satisfies return type
@@ -435,13 +437,13 @@ export const tagsApi = {
 
   delete: (tagId: string, _options?: RequestOptions) => {
     const keys = Object.keys(localStorage).filter((k) => k.startsWith('kanban:tags:'))
-    for (const key of keys) {
+    const matchKey = keys.find((key) => {
       const tags: Tag[] = JSON.parse(localStorage.getItem(key) ?? '[]') as Tag[]
-      const filtered = tags.filter((t) => t.id !== tagId)
-      if (filtered.length !== tags.length) {
-        localStorage.setItem(key, JSON.stringify(filtered))
-        break
-      }
+      return tags.some((t) => t.id === tagId)
+    })
+    if (matchKey) {
+      const tags: Tag[] = JSON.parse(localStorage.getItem(matchKey) ?? '[]') as Tag[]
+      localStorage.setItem(matchKey, JSON.stringify(tags.filter((t) => t.id !== tagId)))
     }
     return delay(undefined as unknown as void)
   },

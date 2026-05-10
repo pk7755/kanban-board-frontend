@@ -5,6 +5,7 @@
  */
 
 @import './tokens.css';
+@import './tokens.dark.css';
 
 *,
 *::before,

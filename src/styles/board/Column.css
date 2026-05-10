@@ -132,6 +132,8 @@
   flex-direction: column;
   gap: var(--space-2);
   min-height: 80px;
+  container-type: inline-size;
+  container-name: task-column;
 }
 
 .board-column__footer {
@@ -164,47 +166,4 @@
 
 .board-column:hover .board-column__add-task {
   opacity: 1;
-}
-
-/* ─── Drag & Drop ─────────────────────────────────────────────────── */
-
-.board-column__body--drop-target {
-  background-color: var(--accent-subtle);
-  border-radius: var(--radius-md);
-  outline: 2px dashed var(--accent-default);
-  outline-offset: -2px;
-  transition: background-color var(--transition-fast);
-}
-
-.board-column__task-slot {
-  display: flex;
-  flex-direction: column;
-}
-
-.drop-indicator {
-  height: 3px;
-  border-radius: var(--radius-full);
-  background-color: var(--accent-default);
-  margin: 2px var(--space-1);
-  animation: drop-indicator-in 120ms ease-out both;
-}
-
-@keyframes drop-indicator-in {
-  from {
-    opacity: 0;
-    transform: scaleX(0.6);
-  }
-  to {
-    opacity: 1;
-    transform: scaleX(1);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .board-column__body--drop-target {
-    transition: none;
-  }
-  .drop-indicator {
-    animation: none;
-  }
 }
