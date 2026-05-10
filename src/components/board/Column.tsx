@@ -4,9 +4,8 @@
  */
 
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Plus, Trash2 } from 'lucide-react'
+import { Trash2 } from 'lucide-react'
 import { TaskCard } from '@/components/board/TaskCard'
-import { Button } from '@/components/ui/Button'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { Badge } from '@/components/ui/Badge'
 import { useAuth } from '@/context/AuthContext'
@@ -23,6 +22,8 @@ interface ColumnProps {
   userMap: UserMap
   searchQuery: string
   onTaskClick: (taskId: string) => void
+  /** Called when user wants to add a task — opens the create modal */
+  onAddTask: (columnId: string) => void
   /** True for the first column — receives the global "N" new-task shortcut */
   isFirst?: boolean
 }
@@ -31,15 +32,13 @@ type SortMode = 'default' | 'priority' | 'dueDate' | 'title'
 
 const PRIORITY_ORDER = { high: 0, medium: 1, low: 2 }
 
-export function Column({ column, tasks, taskMap, userMap, searchQuery, onTaskClick, isFirst = false }: ColumnProps) {
+export function Column({ column, tasks, taskMap, userMap, searchQuery, onTaskClick, onAddTask, isFirst = false }: ColumnProps) {
   const { state: authState } = useAuth()
   const { activeBoard, dispatch } = useBoardContext()
   const { taskId: draggedTaskId, fromColumnId, endDrag } = useDragContext()
   const [isEditingTitle, setIsEditingTitle] = useState(false)
   const [draftTitle, setDraftTitle] = useState(column.title)
   const [sortMode, setSortMode] = useState<SortMode>('default')
-  const [isAddingTask, setIsAddingTask] = useState(false)
-  const [taskTitle, setTaskTitle] = useState('')
   // Drop indicator: index in filteredTasks where the card will be inserted
   const [dropIndex, setDropIndex] = useState<number | null>(null)
   const bodyRef = useRef<HTMLDivElement>(null)
@@ -49,33 +48,45 @@ export function Column({ column, tasks, taskMap, userMap, searchQuery, onTaskCli
   useEffect(() => {
     if (!isFirst) return
     function handleNewTask() {
-      setIsAddingTask(true)
+      onAddTask(column.id)
     }
     window.addEventListener('kanban:new-task', handleNewTask)
     return () => window.removeEventListener('kanban:new-task', handleNewTask)
-  }, [isFirst])
+  }, [isFirst, column.id, onAddTask])
 
   const isManager = authState.user?.role === 'MANAGER'
-  const resolvedTasks = useMemo(() => {
-    if (tasks.length > 0) return tasks
-    return column.taskIds
-      .map((taskId) => taskMap[taskId])
-      .filter((task): task is Task => Boolean(task))
-  }, [column.taskIds, taskMap, tasks])
 
+  // Total unarchived task count for the badge — always reads from taskMap so
+  // the number doesn't change when the board-level filter hides tasks.
+  const totalTaskCount = useMemo(() => {
+    return column.taskIds
+      .map((id) => taskMap[id])
+      .filter((t): t is Task => Boolean(t) && !t.archived)
+      .length
+  }, [column.taskIds, taskMap])
+
+  // `tasks` is already board-level-filtered by BoardPage. Never fall back to
+  // column.taskIds here — that fallback bypassed the priority/tag/assignee
+  // filter when a column had zero matching tasks, making filtered-out tasks
+  // reappear.
   const filteredTasks = useMemo(() => {
     const query = searchQuery.trim().toLowerCase()
     const boardTags = activeBoard?.tags ?? []
-    const visible = resolvedTasks.filter((task) => {
-      if (task.archived) return false
-      if (!query) return true
-      const tagLabels = boardTags
-        .filter((tag) => task.tags?.includes(tag.id))
-        .map((tag) => (tag.label ?? '').toLowerCase())
-        .join(' ')
-      const assigneeName = task.assigneeId ? (userMap[task.assigneeId]?.name ?? '').toLowerCase() : ''
-      return [task.title ?? '', task.description ?? '', tagLabels, assigneeName].join(' ').toLowerCase().includes(query)
-    })
+    const nonArchived = tasks.filter((t) => !t.archived)
+
+    const visible = query
+      ? nonArchived.filter((task) => {
+          const tagLabels = boardTags
+            .filter((tag) => task.tags?.includes(tag.id))
+            .map((tag) => (tag.label ?? '').toLowerCase())
+            .join(' ')
+          const assigneeName = task.assigneeId ? (userMap[task.assigneeId]?.name ?? '').toLowerCase() : ''
+          return [task.title ?? '', task.description ?? '', tagLabels, assigneeName]
+            .join(' ')
+            .toLowerCase()
+            .includes(query)
+        })
+      : nonArchived
 
     return visible.slice().sort((left, right) => {
       switch (sortMode) {
@@ -93,7 +104,7 @@ export function Column({ column, tasks, taskMap, userMap, searchQuery, onTaskCli
           return left.order - right.order
       }
     })
-  }, [activeBoard?.tags, resolvedTasks, searchQuery, sortMode, userMap])
+  }, [activeBoard?.tags, tasks, searchQuery, sortMode, userMap])
 
   /* ── Drop helpers ── */
 
@@ -129,6 +140,9 @@ export function Column({ column, tasks, taskMap, userMap, searchQuery, onTaskCli
 
   async function handleDrop(e: React.DragEvent) {
     e.preventDefault()
+    // Prevent the drop from bubbling to the column wrapper's onDrop handler,
+    // which would otherwise invoke handleColumnDrop and reorder columns.
+    e.stopPropagation()
     dragEnterCountRef.current = 0
     setDropIndex(null)
 
@@ -176,30 +190,6 @@ export function Column({ column, tasks, taskMap, userMap, searchQuery, onTaskCli
     dispatch({ type: 'DELETE_COLUMN', payload: { columnId: column.id, boardId: column.boardId } })
   }
 
-  const handleAddTask = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
-    const title = taskTitle.trim()
-    if (!title) return
-
-    const response = await tasksApi.create({
-      title,
-      description: '',
-      priority: 'medium',
-      dueDate: undefined,
-      tags: [],
-      assigneeId: authState.user?.id,
-      checklist: [],
-      archived: false,
-      order: column.taskIds.length,
-      columnId: column.id,
-      boardId: column.boardId,
-    })
-
-    dispatch({ type: 'ADD_TASK', payload: response.data })
-    setTaskTitle('')
-    setIsAddingTask(false)
-  }
-
   return (
     <section className="board-column" role="list" aria-label={column.title}>
       <header className="board-column__header">
@@ -231,7 +221,7 @@ export function Column({ column, tasks, taskMap, userMap, searchQuery, onTaskCli
               <span className="board-column__title">{column.title}</span>
             </button>
           )}
-          <Badge label={String(resolvedTasks.filter((task) => !task.archived).length)} variant="status" />
+          <Badge label={String(totalTaskCount)} variant="status" />
         </div>
 
         <div className="board-column__actions">
@@ -288,57 +278,13 @@ export function Column({ column, tasks, taskMap, userMap, searchQuery, onTaskCli
           ))
         ) : (
           <EmptyState
-            title={resolvedTasks.length === 0 ? 'No tasks yet' : 'No matching tasks'}
-            description={resolvedTasks.length === 0 ? 'Add a task to start filling this column.' : 'Try a different search or sort option.'}
+            title={totalTaskCount === 0 ? 'No tasks yet' : 'No matching tasks'}
+            description={totalTaskCount === 0 ? 'Add a task to start filling this column.' : 'Try a different search or sort option.'}
           />
         )}
         {/* Drop indicator at end of list */}
         {dropIndex === filteredTasks.length && filteredTasks.length > 0 && (
           <div className="drop-indicator" aria-hidden="true" />
-        )}
-      </div>
-
-      <div className="board-column__footer">
-        {isAddingTask ? (
-          <form className="board-column__task-form" onSubmit={handleAddTask}>
-            <textarea
-              className="board-column__task-input"
-              value={taskTitle}
-              onChange={(event) => setTaskTitle(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key === 'Escape') {
-                  event.preventDefault()
-                  setTaskTitle('')
-                  setIsAddingTask(false)
-                }
-              }}
-              placeholder="Task title"
-              rows={3}
-              autoFocus
-              aria-label={`Create task in ${column.title}`}
-            />
-            <div className="board-column__task-form-actions">
-              <Button type="submit" variant="primary" size="sm">
-                Add task
-              </Button>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  setTaskTitle('')
-                  setIsAddingTask(false)
-                }}
-              >
-                Cancel
-              </Button>
-            </div>
-          </form>
-        ) : (
-          <Button type="button" variant="ghost" className="board-column__add-task" onClick={() => setIsAddingTask(true)}>
-            <Plus size={14} aria-hidden="true" />
-            Add Task
-          </Button>
         )}
       </div>
     </section>

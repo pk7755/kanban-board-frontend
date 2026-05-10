@@ -1,0 +1,287 @@
+/**
+ * ManageTagsModal.css
+ * Styles for the board tag management dialog.
+ */
+
+.manage-tags-modal {
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-xl);
+  padding: 0;
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  box-shadow: var(--shadow-xl);
+  width: min(440px, 95vw);
+  max-height: 85vh;
+  margin: auto;
+  display: flex;
+  flex-direction: column;
+  animation: mtm-in 200ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.manage-tags-modal::backdrop {
+  background-color: var(--bg-overlay);
+  animation: mtm-backdrop-in 180ms ease both;
+}
+
+@keyframes mtm-in {
+  from { opacity: 0; transform: scale(0.95) translateY(-8px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+@keyframes mtm-backdrop-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* ── Header ── */
+.manage-tags-modal__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-4) var(--space-6);
+  border-bottom: 1px solid var(--border-subtle);
+  flex-shrink: 0;
+}
+
+.manage-tags-modal__title {
+  font-size: var(--text-lg);
+  font-weight: var(--font-weight-semibold);
+  margin: 0;
+}
+
+.manage-tags-modal__count {
+  font-weight: var(--font-weight-normal);
+  color: var(--text-tertiary);
+  font-size: var(--text-base);
+}
+
+.manage-tags-modal__close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: var(--space-1);
+  transition: background 150ms, color 150ms;
+}
+
+.manage-tags-modal__close:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+/* ── Tag list ── */
+.manage-tags-modal__list {
+  list-style: none;
+  margin: 0;
+  padding: var(--space-2) 0;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+}
+
+.manage-tags-modal__empty {
+  padding: var(--space-6);
+  text-align: center;
+  color: var(--text-tertiary);
+  font-size: var(--text-sm);
+}
+
+.manage-tags-modal__tag-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-4);
+  transition: background 120ms;
+}
+
+.manage-tags-modal__tag-row:hover {
+  background: var(--bg-hover);
+}
+
+.manage-tags-modal__tag-swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: var(--radius-full);
+  flex-shrink: 0;
+}
+
+.manage-tags-modal__tag-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 3px var(--space-3);
+  border-radius: var(--radius-full);
+  border: 1.5px solid;
+  font-size: var(--text-xs);
+  font-weight: var(--font-weight-semibold);
+  white-space: nowrap;
+  flex: 1;
+}
+
+.manage-tags-modal__tag-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  flex-shrink: 0;
+}
+
+.manage-tags-modal__icon-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  background: none;
+  border: none;
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: background 140ms, color 140ms;
+}
+
+.manage-tags-modal__icon-btn:hover:not(:disabled) {
+  background: var(--bg-muted);
+  color: var(--text-primary);
+}
+
+.manage-tags-modal__icon-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.manage-tags-modal__icon-btn--danger:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--danger-default) 10%, transparent);
+  color: var(--danger-default);
+}
+
+/* ── Form (add / edit) ── */
+.manage-tags-modal__form {
+  padding: var(--space-4) var(--space-4) var(--space-4);
+  border-top: 1px solid var(--border-subtle);
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.manage-tags-modal__form-row {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.manage-tags-modal__name-input {
+  flex: 1;
+  height: 36px;
+  padding: 0 var(--space-3);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  background: var(--bg-input);
+  color: var(--text-primary);
+  font-size: var(--text-sm);
+  outline: none;
+  transition: border-color 150ms;
+}
+
+.manage-tags-modal__name-input:focus {
+  border-color: var(--accent-default);
+  box-shadow: 0 0 0 3px var(--accent-subtle);
+}
+
+.manage-tags-modal__name-input::placeholder {
+  color: var(--text-placeholder);
+}
+
+.manage-tags-modal__color-picker {
+  flex-shrink: 0;
+}
+
+.manage-tags-modal__color-input {
+  width: 36px;
+  height: 36px;
+  border: 1.5px solid var(--border-default);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  padding: 2px;
+  background: none;
+}
+
+/* ── Color palette swatches ── */
+.manage-tags-modal__palette {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.manage-tags-modal__swatch {
+  width: 26px;
+  height: 26px;
+  border-radius: var(--radius-full);
+  border: 2px solid transparent;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 120ms, box-shadow 120ms;
+}
+
+.manage-tags-modal__swatch:hover {
+  transform: scale(1.15);
+}
+
+.manage-tags-modal__swatch--selected {
+  border-color: var(--text-primary);
+  box-shadow: 0 0 0 2px var(--bg-surface), 0 0 0 4px currentColor;
+}
+
+/* ── Preview ── */
+.manage-tags-modal__preview-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+}
+
+/* ── Error ── */
+.manage-tags-modal__error {
+  margin: 0;
+  font-size: var(--text-xs);
+  color: var(--danger-default);
+}
+
+/* ── Form actions ── */
+.manage-tags-modal__form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
+
+/* ── Footer (when not editing) ── */
+.manage-tags-modal__footer {
+  padding: var(--space-3) var(--space-4);
+  border-top: 1px solid var(--border-subtle);
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+/* ── Spinner ── */
+.manage-tags-modal__spinner {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--border-default);
+  border-top-color: var(--accent-default);
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}

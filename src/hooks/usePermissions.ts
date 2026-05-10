@@ -34,10 +34,10 @@ export function usePermissions(): Permissions {
 
   const isManager = user?.role === 'MANAGER'
 
-  const canEditTask = (task: Task): boolean => {
-    if (!user) return false
-    if (isManager) return true
-    return task.assigneeId === user.id
+  const canEditTask = (_task: Task): boolean => {
+    // Any authenticated board member can edit task fields.
+    // Only managers can delete or reassign tasks.
+    return Boolean(user)
   }
 
   const canDragTask = canEditTask

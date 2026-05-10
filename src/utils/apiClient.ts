@@ -181,6 +181,22 @@ export const boardsApi = {
     request<void>(`/boards/${boardId}`, { method: 'DELETE' }, options),
 }
 
+/* ─── Board Members ───────────────────────────────────────────────── */
+export const boardMembersApi = {
+  /** POST /boards/:boardId/members — add member by email */
+  add: async (boardId: string, email: string, options?: RequestOptions): Promise<{ message: string }> => {
+    return request<{ message: string }>(
+      `/boards/${boardId}/members`,
+      { method: 'POST', body: JSON.stringify({ email }) },
+      options,
+    )
+  },
+
+  /** DELETE /boards/:boardId/members/:userId */
+  remove: (boardId: string, userId: string, options?: RequestOptions) =>
+    request<{ message: string }>(`/boards/${boardId}/members/${userId}`, { method: 'DELETE' }, options),
+}
+
 /* ─── Columns ─────────────────────────────────────────────────────── */
 export const columnsApi = {
   /** POST /columns — backend uses `name` not `title`; `order` is ignored */
@@ -298,7 +314,8 @@ export const tagsApi = {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const raw = await requestW<any>(
       `/boards/${boardId}/tags`,
-      { method: 'POST', body: JSON.stringify(data) },
+      // backend expects `name` not `label`
+      { method: 'POST', body: JSON.stringify({ name: data.label, color: data.color }) },
       options,
     )
     return { data: adaptTag(raw) }
@@ -309,10 +326,13 @@ export const tagsApi = {
     data: Partial<Tag>,
     options?: RequestOptions,
   ): Promise<ApiResponse<Tag>> => {
+    const payload: Record<string, unknown> = {}
+    if (data.label !== undefined) payload['name'] = data.label
+    if (data.color !== undefined) payload['color'] = data.color
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const raw = await requestW<any>(
       `/tags/${tagId}`,
-      { method: 'PATCH', body: JSON.stringify(data) },
+      { method: 'PATCH', body: JSON.stringify(payload) },
       options,
     )
     return { data: adaptTag(raw) }
@@ -334,10 +354,11 @@ export const usersApi = {
     return { data: raw }
   },
 
-  update: async (userId: string, data: Partial<User>, options?: RequestOptions): Promise<ApiResponse<User>> => {
+  /** Update a team member's name, email, or role (PATCH /users/team/:id) */
+  update: async (userId: string, data: { name?: string; email?: string; role?: string }, options?: RequestOptions): Promise<ApiResponse<User>> => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const raw = await requestW<any>(
-      `/users/${userId}`,
+      `/users/team/${userId}`,
       { method: 'PATCH', body: JSON.stringify(data) },
       options,
     )
@@ -345,7 +366,11 @@ export const usersApi = {
   },
 
   /** Update the currently authenticated user's own profile (PATCH /users/me) */
-  updateMe: async (_userId: string, data: Partial<User>, options?: RequestOptions): Promise<ApiResponse<User>> => {
+  updateMe: async (
+    _userId: string,
+    data: Partial<User> & { currentPassword?: string; password?: string },
+    options?: RequestOptions,
+  ): Promise<ApiResponse<User>> => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const raw = await requestW<any>(
       '/users/me',
@@ -356,15 +381,18 @@ export const usersApi = {
   },
 
   deactivate: (userId: string, options?: RequestOptions) =>
-    request<void>(`/users/${userId}/deactivate`, { method: 'PATCH' }, options),
+    request<void>(
+      `/users/team/${userId}`,
+      { method: 'PATCH', body: JSON.stringify({ isActive: false }) },
+      options,
+    ),
 
   delete: (userId: string, options?: RequestOptions) =>
-    request<void>(`/users/${userId}`, { method: 'DELETE' }, options),
+    request<void>(`/users/team/${userId}`, { method: 'DELETE' }, options),
 
   resetPassword: async (userId: string, options?: RequestOptions): Promise<ApiResponse<{ temporaryPassword: string }>> => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const raw = await requestW<any>(`/users/${userId}/reset-password`, { method: 'POST' }, options)
-    return { data: raw }
+    const raw = await requestW<{ tempPassword: string }>(`/users/team/${userId}/reset-password`, { method: 'POST' }, options)
+    return { data: { temporaryPassword: raw.tempPassword } }
   },
 
   changePassword: (
@@ -373,7 +401,7 @@ export const usersApi = {
     options?: RequestOptions,
   ) =>
     request<ApiResponse<{ message: string }>>(
-      `/users/${userId}/change-password`,
+      `/users/team/${userId}/change-password`,
       { method: 'POST', body: JSON.stringify(data) },
       options,
     ),

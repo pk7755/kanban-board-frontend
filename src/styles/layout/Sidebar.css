@@ -141,6 +141,30 @@
   justify-content: flex-start;
 }
 
+.sidebar__logout-btn {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-1);
+  padding: var(--space-1) var(--space-2);
+  background: none;
+  border: none;
+  border-radius: var(--radius-md);
+  color: var(--text-tertiary);
+  font-size: var(--text-sm);
+  cursor: pointer;
+  width: 100%;
+  text-align: left;
+  transition: background 0.15s, color 0.15s;
+}
+
+.sidebar__logout-btn:hover {
+  background: var(--color-danger-50, rgba(239, 68, 68, 0.08));
+  color: var(--color-danger);
+}
+
+
+
 /* Board list item row — relative so the delete button can be positioned */
 .sidebar__board-item {
   position: relative;

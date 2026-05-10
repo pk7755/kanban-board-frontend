@@ -13,9 +13,12 @@ import {
   useState,
   type FormEvent,
 } from 'react'
-import { FolderKanban, Plus, Users, Download, Upload } from 'lucide-react'
+import { FolderKanban, Plus, Tag, Users, Download, Upload } from 'lucide-react'
 import { Navigate, useNavigate, useParams } from 'react-router-dom'
 import { Column } from '@/components/board/Column'
+import { BoardMembersModal } from '@/components/board/BoardMembersModal'
+import { ManageTagsModal } from '@/components/board/ManageTagsModal'
+import { CreateTaskModal } from '@/components/board/CreateTaskModal'
 import { FilterBar } from '@/components/board/FilterBar'
 import { Button } from '@/components/ui/Button'
 import { EmptyState } from '@/components/ui/EmptyState'
@@ -25,8 +28,9 @@ import { FilterProvider, useFilter } from '@/context/FilterContext'
 import { DragProvider } from '@/context/DragContext'
 import { useSearchContext } from '@/context/SearchContext'
 import { useKeyboardShortcut } from '@/hooks/useKeyboardShortcut'
+import { useAuth } from '@/context/AuthContext'
 import type { Task, UserMap, Board } from '@/types/entities'
-import { boardsApi, columnsApi, usersApi } from '@/utils/api'
+import { boardsApi, boardMembersApi, columnsApi, usersApi } from '@/utils/api'
 import { isTask } from '@/types/entities'
 import '@/styles/components/Input.css'
 import '@/styles/pages/BoardPage.css'
@@ -43,10 +47,13 @@ function toUserMap(users: Awaited<ReturnType<typeof usersApi.list>>['data']): Us
 function BoardPageInner() {
   const navigate = useNavigate()
   const { boardId } = useParams<{ boardId?: string }>()
+  const { state: authState } = useAuth()
   const { state, dispatch, activeBoard, activeTasks } = useBoardContext()
   const { searchQuery, newBoardDialogOpen, closeNewBoardDialog, openNewBoardDialog } = useSearchContext()
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null)
   const handleCloseTaskDetail = useCallback(() => setSelectedTaskId(null), [])
+  const [createTaskColumnId, setCreateTaskColumnId] = useState<string | null>(null)
+  const [draggingColumnId, setDraggingColumnId] = useState<string | null>(null)
   const [userMap, setUserMap] = useState<UserMap>({})
   const [isEditingTitle, setIsEditingTitle] = useState(false)
   const [draftTitle, setDraftTitle] = useState('')
@@ -56,6 +63,11 @@ function BoardPageInner() {
   const [newBoardDescription, setNewBoardDescription] = useState('')
   const newBoardDialogRef = useRef<HTMLDialogElement>(null)
   const canvasRef = useRef<HTMLDivElement>(null)
+  const [showMembersModal, setShowMembersModal] = useState(false)
+  const [showTagsModal, setShowTagsModal] = useState(false)
+
+  const currentUserId = authState.user?.id ?? ''
+  const isManager = authState.user?.role === 'MANAGER'
 
   // Spec: "N" opens new-task form in the first column via a custom event
   const handleNewTask = useCallback(() => {
@@ -147,26 +159,43 @@ function BoardPageInner() {
     return () => dialog.removeEventListener('close', handleClose)
   }, [closeNewBoardDialog])
 
-  const { filter } = useFilter()
+  const { filter, pruneAssigneeIds } = useFilter()
 
   const tasksByColumn = useMemo(() => {
-    // eslint-disable-next-line react-hooks/purity
-    const _now = Date.now()
+    const now = Date.now()
 
     function matchesFilter(task: Task): boolean {
+      // ── Priority (OR within priorities) ──
       if (filter.priorities.length > 0 && !filter.priorities.includes(task.priority)) return false
+
+      // ── Tags (OR within tags) ──
       if (filter.tagIds.length > 0 && !filter.tagIds.some((id) => task.tags.includes(id))) return false
-      if (filter.assigneeId !== null && task.assigneeId !== filter.assigneeId) return false
+
+      // ── Assignee (multi-select — OR logic) ──
+      if (filter.assigneeIds.length > 0) {
+        const matchesUnassigned = filter.assigneeIds.includes('__unassigned__') && !task.assigneeId
+        const matchesMember = task.assigneeId && filter.assigneeIds.includes(task.assigneeId)
+        if (!matchesUnassigned && !matchesMember) return false
+      }
+
+      // ── Status / Column (OR within columns) ──
+      if (filter.columnIds.length > 0 && !filter.columnIds.includes(task.columnId)) return false
+
+      // ── Overdue only ──
       if (filter.overdueOnly) {
         if (!task.dueDate) return false
-        if (new Date(task.dueDate).getTime() >= _now) return false
+        if (new Date(task.dueDate).getTime() >= now) return false
       }
-      if (filter.dueAfter !== null && task.dueDate) {
-        if (new Date(task.dueDate) < new Date(filter.dueAfter)) return false
+
+      // ── Date range ──
+      const anyDateRange = filter.dueAfter !== null || filter.dueBefore !== null
+      if (anyDateRange) {
+        if (!task.dueDate) return false
+        const due = new Date(task.dueDate).getTime()
+        if (filter.dueAfter !== null && due < new Date(filter.dueAfter).getTime()) return false
+        if (filter.dueBefore !== null && due > new Date(filter.dueBefore).getTime()) return false
       }
-      if (filter.dueBefore !== null && task.dueDate) {
-        if (new Date(task.dueDate) > new Date(filter.dueBefore)) return false
-      }
+
       return true
     }
 
@@ -276,6 +305,88 @@ function BoardPageInner() {
     [dispatch, navigate],
   )
   const importInputRef = useRef<HTMLInputElement>(null)
+
+  // ── Column drag-and-drop reordering ──
+  const draggingOverColumnId = useRef<string | null>(null)
+
+  const handleColumnDragStart = useCallback((columnId: string) => {
+    setDraggingColumnId(columnId)
+  }, [])
+
+  const handleColumnDragOver = useCallback((e: React.DragEvent, columnId: string) => {
+    e.preventDefault()
+    draggingOverColumnId.current = columnId
+  }, [])
+
+  const handleColumnDrop = useCallback(async () => {
+    if (!activeBoard || !draggingColumnId || !draggingOverColumnId.current) {
+      setDraggingColumnId(null)
+      return
+    }
+    const fromId = draggingColumnId
+    const toId = draggingOverColumnId.current
+    if (fromId === toId) {
+      setDraggingColumnId(null)
+      return
+    }
+    const columns = [...activeBoard.columns]
+    const fromIndex = columns.findIndex((c) => c.id === fromId)
+    const toIndex = columns.findIndex((c) => c.id === toId)
+    if (fromIndex === -1 || toIndex === -1) {
+      setDraggingColumnId(null)
+      return
+    }
+    // Optimistic reorder
+    const reordered = [...columns]
+    const [moved] = reordered.splice(fromIndex, 1)
+    reordered.splice(toIndex, 0, moved)
+    const columnIds = reordered.map((c) => c.id)
+    dispatch({ type: 'REORDER_COLUMNS', payload: { boardId: activeBoard.id, columnIds } })
+    setDraggingColumnId(null)
+    draggingOverColumnId.current = null
+    try {
+      await columnsApi.reorder(activeBoard.id, columnIds)
+    } catch {
+      // Revert on failure
+      dispatch({
+        type: 'REORDER_COLUMNS',
+        payload: { boardId: activeBoard.id, columnIds: columns.map((c) => c.id) },
+      })
+    }
+  }, [activeBoard, draggingColumnId, dispatch])
+
+
+  const handleAddMember = useCallback(async (email: string) => {
+    if (!activeBoard) return
+    await boardMembersApi.add(activeBoard.id, email)
+    // Reload board detail to get fresh member list
+    const detail = await boardsApi.get(activeBoard.id)
+    dispatch({
+      type: 'UPDATE_BOARD_MEMBERS',
+      payload: {
+        boardId: activeBoard.id,
+        memberIds: detail.data.memberIds as string[],
+        members: (detail.data.members ?? []) as import('@/types/entities').BoardMember[],
+      },
+    })
+  }, [activeBoard, dispatch])
+
+  const handleRemoveMember = useCallback(async (userId: string) => {
+    if (!activeBoard) return
+    await boardMembersApi.remove(activeBoard.id, userId)
+    const remainingMembers = (activeBoard.members ?? []).filter((m) => m.userId !== userId)
+    // Optimistic update
+    dispatch({
+      type: 'UPDATE_BOARD_MEMBERS',
+      payload: {
+        boardId: activeBoard.id,
+        memberIds: activeBoard.memberIds.filter((id) => id !== userId) as string[],
+        members: remainingMembers as import('@/types/entities').BoardMember[],
+      },
+    })
+    // Remove the deleted member from active assignee filters
+    pruneAssigneeIds(remainingMembers.map((m) => m.userId))
+  }, [activeBoard, dispatch, pruneAssigneeIds])
 
   if (!boardId && state.boards.length > 0) {
     return <Navigate to={`/boards/${state.boards[0].id}`} replace />
@@ -399,15 +510,41 @@ function BoardPageInner() {
           )}
           <p className="board-page__description">{activeBoard.description || 'No board description yet.'}</p>
           <div className="board-page__meta">
-            <span className="board-page__meta-item">
+            <button
+              type="button"
+              className="board-page__meta-item board-page__meta-item--clickable"
+              onClick={() => setShowMembersModal(true)}
+              aria-label={`${activeBoard.memberIds.length} members — click to manage`}
+            >
               <Users size={14} aria-hidden="true" />
-              {activeBoard.memberIds.length} members
-            </span>
+              {activeBoard.memberIds.length} {activeBoard.memberIds.length === 1 ? 'member' : 'members'}
+            </button>
+            <button
+              type="button"
+              className="board-page__meta-item board-page__meta-item--clickable"
+              onClick={() => setShowTagsModal(true)}
+              aria-label={`${activeBoard.tags.length} tags — click to manage`}
+            >
+              <Tag size={14} aria-hidden="true" />
+              {activeBoard.tags.length} {activeBoard.tags.length === 1 ? 'tag' : 'tags'}
+            </button>
             {state.error ? <span className="board-page__error">{state.error}</span> : null}
           </div>
         </div>
 
         <div className="board-page__header-actions">
+          {/* Global Create Task button */}
+          {activeBoard.columns.length > 0 ? (
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={() => setCreateTaskColumnId(activeBoard.columns[0].id)}
+              aria-label="Create new task"
+            >
+              <Plus size={14} aria-hidden="true" />
+              Create Task
+            </Button>
+          ) : null}
           {isAddingColumn ? (
             <form className="board-page__column-form" onSubmit={handleAddColumn}>
               <input
@@ -463,20 +600,34 @@ function BoardPageInner() {
         </div>
       </header>
 
-      <FilterBar boardTags={activeBoard.tags} userMap={userMap} />
+      <FilterBar
+        boardMembers={activeBoard.members ?? []}
+        boardTags={activeBoard.tags}
+        boardColumns={(activeBoard.columns ?? []).slice().sort((a, b) => a.order - b.order)}
+      />
 
       <div className="board-page__canvas" ref={canvasRef} aria-label={`${activeBoard.title} columns`}>
         {activeBoard.columns.map((column, index) => (
-          <Column
+          <div
             key={column.id}
-            column={column}
-            tasks={tasksByColumn[column.id] ?? []}
-            taskMap={state.tasks}
-            userMap={userMap}
-            searchQuery={searchQuery}
-            onTaskClick={setSelectedTaskId}
-            isFirst={index === 0}
-          />
+            draggable
+            onDragStart={() => handleColumnDragStart(column.id)}
+            onDragOver={(e) => handleColumnDragOver(e, column.id)}
+            onDrop={handleColumnDrop}
+            onDragEnd={() => setDraggingColumnId(null)}
+            style={{ opacity: draggingColumnId === column.id ? 0.5 : 1, transition: 'opacity 0.15s' }}
+          >
+            <Column
+              column={column}
+              tasks={tasksByColumn[column.id] ?? []}
+              taskMap={state.tasks}
+              userMap={userMap}
+              searchQuery={searchQuery}
+              onTaskClick={setSelectedTaskId}
+              onAddTask={setCreateTaskColumnId}
+              isFirst={index === 0}
+            />
+          </div>
         ))}
       </div>
 
@@ -523,6 +674,39 @@ function BoardPageInner() {
           <TaskDetail key={selectedTaskId} taskId={selectedTaskId} onClose={handleCloseTaskDetail} />
         </Suspense>
       ) : null}
+
+      {createTaskColumnId && activeBoard ? (
+        <CreateTaskModal
+          key={createTaskColumnId}
+          columnId={createTaskColumnId}
+          boardId={activeBoard.id}
+          onClose={() => setCreateTaskColumnId(null)}
+          onCreated={(task) => {
+            setCreateTaskColumnId(null)
+            setSelectedTaskId(task.id)
+          }}
+        />
+      ) : null}
+
+      {showMembersModal && activeBoard && (
+        <BoardMembersModal
+          boardId={activeBoard.id}
+          ownerId={activeBoard.ownerId}
+          currentUserId={currentUserId}
+          isManager={isManager}
+          members={activeBoard.members ?? []}
+          onAddMember={handleAddMember}
+          onRemoveMember={handleRemoveMember}
+          onClose={() => setShowMembersModal(false)}
+        />
+      )}
+
+      {showTagsModal && activeBoard && (
+        <ManageTagsModal
+          boardId={activeBoard.id}
+          onClose={() => setShowTagsModal(false)}
+        />
+      )}
     </div>
   )
 }

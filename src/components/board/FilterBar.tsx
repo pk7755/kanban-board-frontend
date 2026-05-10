@@ -1,164 +1,178 @@
 /**
  * FilterBar.tsx
- * Horizontal filter strip rendered below the board header.
- * Filters: priority chips, tag chips, assignee dropdown,
- *          due-date range, overdue-only toggle, clear-all button.
- *
- * Spec: filter by priority, tag, assignee, due date range, and "overdue only".
- * Manager also gets a "View as" assignee filter (same control, different label).
+ * Compact filter strip with per-group dropdown checkboxes.
+ * Groups: Priority · Status · Members · Tags
+ * Each group button shows selected count; clicking opens a checkbox dropdown.
  */
 
-import { useMemo } from 'react'
-import { X, Filter } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import { X, Filter, ChevronDown } from 'lucide-react'
 import { useFilter } from '@/context/FilterContext'
-import { usePermissions } from '@/hooks/usePermissions'
 import { PRIORITIES } from '@/types/entities'
-import type { Tag, UserMap } from '@/types/entities'
+import type { BoardMember, Column, Tag } from '@/types/entities'
 import '@/styles/board/FilterBar.css'
 
 interface FilterBarProps {
-  boardTags: Tag[]
-  userMap: UserMap
+  boardMembers: ReadonlyArray<BoardMember>
+  boardTags: ReadonlyArray<Tag>
+  boardColumns: ReadonlyArray<Column>
 }
 
-const PRIORITY_LABELS: Record<string, string> = {
-  low: 'Low',
-  medium: 'Medium',
-  high: 'High',
+const PRIORITY_LABELS: Record<string, string> = { low: 'Low', medium: 'Medium', high: 'High' }
+const PRIORITY_COLORS: Record<string, string> = { low: '#22c55e', medium: '#f59e0b', high: '#ef4444' }
+
+/* ── Generic checkbox dropdown group ─────────────────────────── */
+
+interface CheckGroup {
+  label: string
+  options: { id: string; label: string; color?: string }[]
+  selected: string[]
+  onToggle: (id: string) => void
+  onClear: () => void
 }
 
-export function FilterBar({ boardTags, userMap }: FilterBarProps) {
-  const { filter, setFilter, clearFilter, isActive } = useFilter()
-  const { isManager } = usePermissions()
+function FilterGroup({ label, options, selected, onToggle, onClear }: CheckGroup) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
 
-  const users = useMemo(() => Object.values(userMap), [userMap])
+  // Close on outside click
+  useEffect(() => {
+    if (!open) return
+    function handler(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [open])
 
-  function togglePriority(p: string) {
-    const priorities = filter.priorities.includes(p as never)
-      ? filter.priorities.filter((x) => x !== p)
-      : [...filter.priorities, p as never]
-    setFilter({ priorities })
-  }
-
-  function toggleTag(tagId: string) {
-    const tagIds = filter.tagIds.includes(tagId)
-      ? filter.tagIds.filter((x) => x !== tagId)
-      : [...filter.tagIds, tagId]
-    setFilter({ tagIds })
-  }
+  const count = selected.length
 
   return (
-    <div
-      className={`filter-bar${isActive ? ' filter-bar--active' : ''}`}
-      role="search"
-      aria-label="Board filters"
-    >
+    <div className="fbar-group" ref={ref}>
+      <button
+        type="button"
+        className={`fbar-group__trigger${count > 0 ? ' fbar-group__trigger--active' : ''}`}
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        aria-haspopup="listbox"
+      >
+        <span>{label}</span>
+        {count > 0 && <span className="fbar-group__badge">{count}</span>}
+        <ChevronDown size={12} className={`fbar-group__chevron${open ? ' fbar-group__chevron--open' : ''}`} />
+      </button>
+
+      {open && (
+        <div className="fbar-group__dropdown" role="listbox" aria-multiselectable="true" aria-label={label}>
+          {options.map((opt) => {
+            const checked = selected.includes(opt.id)
+            return (
+              <label key={opt.id} className={`fbar-option${checked ? ' fbar-option--checked' : ''}`}>
+                <input
+                  type="checkbox"
+                  className="fbar-option__checkbox"
+                  checked={checked}
+                  onChange={() => onToggle(opt.id)}
+                />
+                {opt.color && (
+                  <span className="fbar-option__dot" style={{ background: opt.color }} aria-hidden="true" />
+                )}
+                <span className="fbar-option__label">{opt.label}</span>
+              </label>
+            )
+          })}
+          {selected.length > 0 && (
+            <button type="button" className="fbar-group__clear-btn" onClick={onClear}>
+              Clear {label.toLowerCase()}
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+/* ── FilterBar ────────────────────────────────────────────────── */
+
+export function FilterBar({ boardMembers, boardTags, boardColumns }: FilterBarProps) {
+  const { filter, setFilter, clearFilter, isActive } = useFilter()
+
+  function toggle(field: 'priorities' | 'tagIds' | 'assigneeIds' | 'columnIds', id: string) {
+    const current = filter[field] as string[]
+    const next = current.includes(id) ? current.filter((x) => x !== id) : [...current, id]
+    setFilter({ [field]: next })
+  }
+
+  const activeMembers = boardMembers.filter((m) => m.isActive)
+
+  const memberOptions = [
+    { id: '__unassigned__', label: 'Unassigned' },
+    ...activeMembers.map((m) => ({ id: m.userId, label: m.name ?? m.email ?? m.userId })),
+  ]
+
+  const priorityOptions = PRIORITIES.map((p) => ({
+    id: p,
+    label: PRIORITY_LABELS[p],
+    color: PRIORITY_COLORS[p],
+  }))
+
+  const statusOptions = boardColumns.map((c) => ({ id: c.id, label: c.title }))
+
+  const tagOptions = boardTags.map((t) => ({ id: t.id, label: t.label ?? t.id, color: t.color }))
+
+  return (
+    <div className={`filter-bar${isActive ? ' filter-bar--active' : ''}`} aria-label="Board filters">
       <span className="filter-bar__label">
         <Filter size={13} aria-hidden="true" />
         Filter
       </span>
 
-      {/* ── Priority chips ── */}
-      <div className="filter-bar__group" role="group" aria-label="Filter by priority">
-        {PRIORITIES.map((p) => (
-          <button
-            key={p}
-            type="button"
-            className={`filter-chip filter-chip--priority-${p}${filter.priorities.includes(p) ? ' filter-chip--active' : ''}`}
-            onClick={() => togglePriority(p)}
-            aria-pressed={filter.priorities.includes(p)}
-          >
-            {PRIORITY_LABELS[p]}
-          </button>
-        ))}
-      </div>
+      {/* Priority */}
+      <FilterGroup
+        label="Priority"
+        options={priorityOptions}
+        selected={filter.priorities as string[]}
+        onToggle={(id) => toggle('priorities', id)}
+        onClear={() => setFilter({ priorities: [] })}
+      />
 
-      {/* ── Tag chips ── */}
-      {boardTags.length > 0 && (
-        <div className="filter-bar__group" role="group" aria-label="Filter by tag">
-          {boardTags.map((tag) => (
-            <button
-              key={tag.id}
-              type="button"
-              className={`filter-chip${filter.tagIds.includes(tag.id) ? ' filter-chip--active' : ''}`}
-              style={
-                filter.tagIds.includes(tag.id)
-                  ? { backgroundColor: tag.color + '33', borderColor: tag.color, color: tag.color }
-                  : { borderColor: tag.color + '66', color: tag.color }
-              }
-              onClick={() => toggleTag(tag.id)}
-              aria-pressed={filter.tagIds.includes(tag.id)}
-            >
-              {tag.label}
-            </button>
-          ))}
-        </div>
+      {/* Status */}
+      {statusOptions.length > 0 && (
+        <FilterGroup
+          label="Status"
+          options={statusOptions}
+          selected={filter.columnIds}
+          onToggle={(id) => toggle('columnIds', id)}
+          onClear={() => setFilter({ columnIds: [] })}
+        />
       )}
 
-      {/* ── Assignee / "View as" dropdown ── */}
-      {users.length > 0 && (
-        <select
-          className="filter-bar__select"
-          value={filter.assigneeId ?? ''}
-          onChange={(e) => setFilter({ assigneeId: e.target.value || null })}
-          aria-label={isManager ? 'View as team member' : 'Filter by assignee'}
-        >
-          <option value="">{isManager ? 'View as…' : 'Assignee'}</option>
-          {users.map((u) => (
-            <option key={u.id} value={u.id}>
-              {u.name}
-            </option>
-          ))}
-        </select>
+      {/* Members */}
+      {activeMembers.length > 0 && (
+        <FilterGroup
+          label="Members"
+          options={memberOptions}
+          selected={filter.assigneeIds}
+          onToggle={(id) => toggle('assigneeIds', id)}
+          onClear={() => setFilter({ assigneeIds: [] })}
+        />
       )}
 
-      {/* ── Due date range ── */}
-      <div className="filter-bar__group filter-bar__group--dates" role="group" aria-label="Filter by due date">
-        <label className="filter-bar__date-label" htmlFor="filter-due-after">
-          From
-        </label>
-        <input
-          id="filter-due-after"
-          type="date"
-          className="filter-bar__date"
-          value={filter.dueAfter ?? ''}
-          onChange={(e) => setFilter({ dueAfter: e.target.value || null })}
-          aria-label="Due date from"
+      {/* Tags */}
+      {tagOptions.length > 0 && (
+        <FilterGroup
+          label="Tags"
+          options={tagOptions}
+          selected={filter.tagIds}
+          onToggle={(id) => toggle('tagIds', id)}
+          onClear={() => setFilter({ tagIds: [] })}
         />
-        <label className="filter-bar__date-label" htmlFor="filter-due-before">
-          To
-        </label>
-        <input
-          id="filter-due-before"
-          type="date"
-          className="filter-bar__date"
-          value={filter.dueBefore ?? ''}
-          onChange={(e) => setFilter({ dueBefore: e.target.value || null })}
-          aria-label="Due date to"
-        />
-      </div>
+      )}
 
-      {/* ── Overdue only toggle ── */}
-      <label className="filter-bar__toggle">
-        <input
-          type="checkbox"
-          checked={filter.overdueOnly}
-          onChange={(e) => setFilter({ overdueOnly: e.target.checked })}
-          aria-label="Show overdue tasks only"
-        />
-        Overdue only
-      </label>
-
-      {/* ── Clear all ── */}
+      {/* Clear all */}
       {isActive && (
-        <button
-          type="button"
-          className="filter-bar__clear"
-          onClick={clearFilter}
-          aria-label="Clear all filters"
-        >
+        <button type="button" className="filter-bar__clear" onClick={clearFilter} aria-label="Clear all filters">
           <X size={13} aria-hidden="true" />
-          Clear
+          Clear all
         </button>
       )}
     </div>

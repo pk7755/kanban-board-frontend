@@ -7,7 +7,7 @@
  * handled here so no component or context needs to know about the backend shape.
  */
 
-import type { Board, Column, Task, Tag, Priority, ChecklistItem } from '@/types/entities'
+import type { Board, BoardMember, Column, Task, Tag, Priority, ChecklistItem } from '@/types/entities'
 
 /* ─── Raw backend shapes ──────────────────────────────────────────── */
 // These are NOT exported — they live only in the adapter layer.
@@ -33,6 +33,7 @@ interface RawMember {
   name: string
   email: string
   avatarUrl?: string | null
+  isActive?: boolean
 }
 
 interface RawBoardDetail extends RawBoardListItem {
@@ -42,7 +43,9 @@ interface RawBoardDetail extends RawBoardListItem {
 
 interface RawTag {
   id: string
-  label: string
+  /** Backend returns `name`; older snapshots may use `label` */
+  name?: string
+  label?: string
   color: string
 }
 
@@ -54,7 +57,14 @@ interface RawTaskTag {
 interface RawChecklistItem {
   id: string
   text: string
-  completed: boolean
+  done: boolean
+}
+
+interface RawTaskAssignee {
+  id: string
+  name: string
+  email?: string
+  avatarUrl?: string | null
 }
 
 interface RawTask {
@@ -66,6 +76,7 @@ interface RawTask {
   columnId: string
   position: number
   assigneeId?: string | null
+  assignee?: RawTaskAssignee | null
   archived: boolean
   createdAt: string | Date
   updatedAt: string | Date
@@ -94,7 +105,7 @@ function adaptPriority(raw: string): Priority {
 
 /** Normalise a tag from the backend */
 export function adaptTag(raw: RawTag): Tag {
-  return { id: raw.id, label: raw.label, color: raw.color }
+  return { id: raw.id, label: raw.name ?? raw.label ?? '', color: raw.color }
 }
 
 /** Normalise a column from the backend */
@@ -127,16 +138,24 @@ export function adaptBoard(raw: RawBoardListItem): Board {
   }
 }
 
-/** Normalise a full board detail (columns + memberIds). */
+/** Normalise a full board detail (columns + memberIds + members). */
 export function adaptBoardDetail(raw: RawBoardDetail): Board {
   const ts = String(raw.createdAt)
+  const members: BoardMember[] = raw.members.map((m) => ({
+    userId: m.userId,
+    name: m.name,
+    email: m.email,
+    avatarUrl: m.avatarUrl ?? null,
+    isActive: m.isActive ?? true,
+  }))
   return {
     id: raw.id,
     title: raw.name,
     description: '',
     columns: raw.columns.map((col) => adaptColumn(col, raw.id)),
     tags: [],
-    memberIds: raw.members.map((m) => m.userId),
+    memberIds: members.map((m) => m.userId),
+    members,
     ownerId: raw.ownerId,
     createdAt: ts,
     updatedAt: ts,
@@ -151,8 +170,12 @@ export function adaptTask(raw: RawTask, boardId: string): Task {
   const checklist: ChecklistItem[] = (raw.checklistItems ?? []).map((item) => ({
     id: item.id,
     text: item.text,
-    completed: item.completed,
+    completed: item.done,
   }))
+
+  const tagObjects: Tag[] = (raw.tags ?? [])
+    .filter((t): t is RawTaskTag & { tag: RawTag } => !!t.tag)
+    .map((t) => adaptTag(t.tag))
 
   return {
     id: raw.id,
@@ -161,7 +184,10 @@ export function adaptTask(raw: RawTask, boardId: string): Task {
     priority: adaptPriority(raw.priority),
     dueDate: raw.dueDate ?? undefined,
     tags: (raw.tags ?? []).map((t) => t.tagId),
+    tagObjects: tagObjects.length > 0 ? tagObjects : undefined,
     assigneeId: raw.assigneeId ?? undefined,
+    assigneeName: raw.assignee?.name,
+    assigneeAvatarUrl: raw.assignee?.avatarUrl ?? null,
     checklist,
     archived: raw.archived,
     order: raw.position,
@@ -217,8 +243,16 @@ export function adaptTaskUpdatePayload(data: Partial<Task>): Record<string, unkn
   if (data.priority !== undefined) out.priority = adaptPriorityOut(data.priority)
   if (data.dueDate !== undefined) out.dueDate = data.dueDate ?? null
   if (data.columnId !== undefined) out.columnId = data.columnId
-  if (data.assigneeId !== undefined) out.assigneeId = data.assigneeId ?? null
+  // Use key-presence check: `{ assigneeId: undefined }` = "unassign" → null
+  if ('assigneeId' in data) out.assigneeId = data.assigneeId ?? null
   if (data.tags !== undefined) out.tagIds = [...data.tags]
+  if (data.checklist !== undefined) {
+    out.checklistItems = data.checklist.map((item, index) => ({
+      text: item.text,
+      done: item.completed,
+      position: index,
+    }))
+  }
   return out
 }
 

@@ -54,9 +54,15 @@ function TaskCardComponent({ task, userMap, searchQuery, onTaskClick }: TaskCard
   const [draftTitle, setDraftTitle] = useState(task.title)
 
   const currentUser = authState.user
-  const assignee = task.assigneeId ? userMap[task.assigneeId] : undefined
+  // Prefer assignee data embedded in the task (from backend response); fall back to userMap
+  const assigneeFromMap = task.assigneeId ? userMap[task.assigneeId] : undefined
+  const assigneeName = task.assigneeName ?? assigneeFromMap?.name
+  const assigneeAvatarUrl = task.assigneeAvatarUrl ?? assigneeFromMap?.avatarUrl
   const boardTags = activeBoard?.tags ?? []
-  const tags = boardTags.filter((tag) => task.tags.includes(tag.id))
+  // Prefer tag objects embedded in the task (from backend); fall back to board lookup
+  const tags = task.tagObjects?.length
+    ? [...task.tagObjects]
+    : boardTags.filter((tag) => task.tags.includes(tag.id))
   const checklistTotal = task.checklist.length
   const checklistCompleted = task.checklist.filter((item) => item.completed).length
   const formattedDueDate = formatDueDate(task.dueDate)
@@ -71,6 +77,11 @@ function TaskCardComponent({ task, userMap, searchQuery, onTaskClick }: TaskCard
   /* ── Drag handlers ── */
   function handleDragStart(e: React.DragEvent<HTMLElement>) {
     if (isReadOnly) { e.preventDefault(); return }
+
+    // CRITICAL: prevent the event from bubbling to the column wrapper <div draggable>.
+    // Without this, the column's onDragStart fires too, setting draggingColumnId and
+    // causing columns to reorder on every task drop.
+    e.stopPropagation()
 
     e.dataTransfer.effectAllowed = 'move'
     e.dataTransfer.setData('text/plain', task.id)
@@ -130,9 +141,9 @@ function TaskCardComponent({ task, userMap, searchQuery, onTaskClick }: TaskCard
   }
 
   const assigneeLabel = useMemo(() => {
-    if (!assignee) return 'Unassigned'
-    return assignee.name
-  }, [assignee])
+    if (!task.assigneeId) return 'Unassigned'
+    return assigneeName ?? 'Unassigned'
+  }, [task.assigneeId, assigneeName])
 
   return (
     <article
@@ -155,7 +166,7 @@ function TaskCardComponent({ task, userMap, searchQuery, onTaskClick }: TaskCard
         <span
           className={`task-card__drag-handle${isReadOnly ? ' task-card__drag-handle--locked' : ''}`}
           aria-hidden="true"
-          title={isReadOnly ? `Read-only — assigned to ${assignee?.name ?? 'someone'}` : 'Drag to move'}
+          title={isReadOnly ? `Read-only — assigned to ${assigneeName ?? 'someone'}` : 'Drag to move'}
         >
           {isReadOnly ? <Lock size={14} /> : <GripVertical size={16} />}
         </span>
@@ -209,7 +220,23 @@ function TaskCardComponent({ task, userMap, searchQuery, onTaskClick }: TaskCard
       <div className="task-card__footer">
         <div className="task-card__assignee" aria-label={`Assignee: ${assigneeLabel}`}>
           <span className="task-card__avatar">
-            {assignee ? assignee.name.charAt(0).toUpperCase() : <UserRound size={12} aria-hidden="true" />}
+            {assigneeAvatarUrl ? (
+              <img
+                src={assigneeAvatarUrl}
+                alt={assigneeName ?? ''}
+                className="task-card__avatar-img"
+                onError={(e) => {
+                  const target = e.currentTarget
+                  target.style.display = 'none'
+                  const parent = target.parentElement
+                  if (parent && assigneeName) parent.textContent = assigneeName.charAt(0).toUpperCase()
+                }}
+              />
+            ) : assigneeName ? (
+              assigneeName.charAt(0).toUpperCase()
+            ) : (
+              <UserRound size={12} aria-hidden="true" />
+            )}
           </span>
           <span className="task-card__assignee-name">{assigneeLabel}</span>
         </div>

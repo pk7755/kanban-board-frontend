@@ -18,8 +18,9 @@ export function Badge({ label, color, variant = 'status' }: BadgeProps) {
   const style =
     variant === 'tag' && color
       ? {
-          backgroundColor: `${color}20`,
+          backgroundColor: `${color}22`,
           color,
+          borderColor: `${color}66`,
         }
       : undefined
 

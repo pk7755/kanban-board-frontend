@@ -159,6 +159,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       email: user.email,
       role: user.role,
       token: accessToken,
+      avatarUrl: user.avatarUrl,
     }
     saveSession(accessToken, refreshToken, authUser)
     dispatch({ type: 'LOGIN', payload: { user: authUser } })

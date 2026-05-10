@@ -355,8 +355,19 @@ export const usersApi = {
   },
 
   /** Update own profile — same as update in mock (userId known from caller) */
-  updateMe: (userId: string, data: Partial<User>, options?: RequestOptions) => {
-    return usersApi.update(userId, data, options)
+  updateMe: (
+    userId: string,
+    data: Partial<User> & { currentPassword?: string; password?: string },
+    options?: RequestOptions,
+  ) => {
+    // If a password change is requested, validate the current password
+    if (data.password !== undefined) {
+      if (!data.currentPassword) mockError('Current password is required', 400)
+      // In mock mode we can't verify the real password, just confirm it's non-empty
+    }
+    // Strip password fields before passing to update (mock doesn't persist passwords)
+    const { currentPassword: _cp, password: _p, ...profileData } = data
+    return usersApi.update(userId, profileData, options)
   },
 
   deactivate: (userId: string, _options?: RequestOptions) => {

@@ -8,16 +8,16 @@ import {
   useMemo,
   useRef,
   useState,
-  type ChangeEvent,
   type KeyboardEvent as ReactKeyboardEvent,
 } from 'react'
 import { Lock, Trash2, X } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Skeleton } from '@/components/ui/Skeleton'
-import { useAuth } from '@/context/AuthContext'
+import { TagPicker } from '@/components/board/TagPicker'
 import { useBoardContext } from '@/context/BoardContext'
-import type { Board, ChecklistItem, Task, User, UserMap } from '@/types/entities'
-import { boardsApi, tasksApi, usersApi } from '@/utils/api'
+import { usePermissions } from '@/hooks/usePermissions'
+import type { Board, ChecklistItem, Task } from '@/types/entities'
+import { boardsApi, tasksApi } from '@/utils/api'
 import '@/styles/components/Input.css'
 import '@/styles/pages/TaskDetail.css'
 
@@ -29,27 +29,23 @@ interface TaskDetailProps {
 const FOCUSABLE_SELECTOR =
   'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
 
-function toUserMap(users: User[]): UserMap {
-  return users.reduce<UserMap>((acc, user) => {
-    acc[user.id] = user
-    return acc
-  }, {})
-}
-
 function normalizeDateValue(value?: string): string {
   return value ? value.slice(0, 10) : ''
 }
 
 export default function TaskDetail({ taskId, onClose }: TaskDetailProps) {
   const dialogRef = useRef<HTMLDialogElement>(null)
-  const { state: authState } = useAuth()
   const { state, dispatch } = useBoardContext()
   const task = state.tasks[taskId]
-  const [users, setUsers] = useState<UserMap>({})
   const [board, setBoard] = useState<Board | null>(null)
   const [draft, setDraft] = useState<Task | null>(task ?? null)
   const [newChecklistItem, setNewChecklistItem] = useState('')
   const [isLoading, setIsLoading] = useState(true)
+
+  // Board tags from context — available immediately without waiting for API call.
+  // Falls back to the async-loaded board once it arrives (for freshest data).
+  const contextBoard = task ? state.boards.find((b) => b.id === task.boardId) : undefined
+  const boardTags = (board ?? contextBoard)?.tags ?? []
 
   // Sync draft when task updates externally (e.g. drag-and-drop column change)
   useEffect(() => {
@@ -126,9 +122,8 @@ export default function TaskDetail({ taskId, onClose }: TaskDetailProps) {
     async function loadDetailData(boardId: string) {
       setIsLoading(true)
       try {
-        const [usersResponse, boardResponse] = await Promise.all([usersApi.list(), boardsApi.get(boardId)])
+        const boardResponse = await boardsApi.get(boardId)
         if (cancelled) return
-        setUsers(toUserMap(usersResponse.data))
         setBoard(boardResponse.data)
       } finally {
         if (!cancelled) setIsLoading(false)
@@ -142,11 +137,9 @@ export default function TaskDetail({ taskId, onClose }: TaskDetailProps) {
     }
   }, [task])
 
-  const currentUser = authState.user
-  const canEdit = Boolean(
-    task && currentUser && (currentUser.role === 'MANAGER' || currentUser.id === task.assigneeId),
-  )
-  const canDelete = currentUser?.role === 'MANAGER'
+  const { canEditTask, canDeleteTask } = usePermissions()
+  const canEdit = Boolean(task && canEditTask(task))
+  const canDelete = Boolean(task && canDeleteTask(task))
 
   const saveTask = async (changes: Partial<Task>) => {
     if (!task || !draft || !canEdit) return
@@ -159,6 +152,25 @@ export default function TaskDetail({ taskId, onClose }: TaskDetailProps) {
     if (!task || !draft || !canEdit) return
     if (draft[field] === task[field]) return
     await saveTask({ [field]: value } as Partial<Task>)
+  }
+
+  /** Move task to a different column (status change). */
+  const handleStatusChange = async (toColumnId: string) => {
+    if (!task || !draft || !canEdit || toColumnId === draft.columnId) return
+    // Move to end of the target column
+    const targetCol = board?.columns.find((c) => c.id === toColumnId)
+    const toIndex = targetCol ? targetCol.taskIds.length : 0
+    const fromColumnId = draft.columnId
+    // Optimistic state update
+    setDraft((current) => (current ? { ...current, columnId: toColumnId } : current))
+    dispatch({ type: 'MOVE_TASK', payload: { taskId: task.id, fromColumnId, toColumnId, toIndex } })
+    try {
+      await tasksApi.move(task.id, { toColumnId, toIndex })
+    } catch {
+      // Revert on failure
+      setDraft((current) => (current ? { ...current, columnId: fromColumnId } : current))
+      dispatch({ type: 'MOVE_TASK', payload: { taskId: task.id, fromColumnId: toColumnId, toColumnId: fromColumnId, toIndex: 0 } })
+    }
   }
 
   const checklistProgress = useMemo(() => {
@@ -175,9 +187,36 @@ export default function TaskDetail({ taskId, onClose }: TaskDetailProps) {
       <div className="task-detail__backdrop" onClick={onClose} aria-hidden="true" />
       <div className="task-detail__panel">
         <header className="task-detail__header">
-          <div>
+          <div className="task-detail__header-info">
             <p className="task-detail__eyebrow">Task details</p>
             <h2 className="task-detail__heading">{task.title}</h2>
+            {/* Status shown prominently in header */}
+            {board ? (
+              <div className="task-detail__status-row">
+                <span className="task-detail__status-pill-label">Status</span>
+                <select
+                  className="task-detail__status-pill"
+                  value={draft.columnId}
+                  disabled={!canEdit}
+                  aria-label="Task status"
+                  onChange={(event) => { void handleStatusChange(event.target.value) }}
+                >
+                  {board.columns
+                    .slice()
+                    .sort((a, b) => a.order - b.order)
+                    .map((col) => (
+                      <option key={col.id} value={col.id}>
+                        {col.title}
+                      </option>
+                    ))}
+                </select>
+              </div>
+            ) : (
+              <div className="task-detail__status-row">
+                <span className="task-detail__status-pill-label">Status</span>
+                <span className="task-detail__status-loading">Loading…</span>
+              </div>
+            )}
           </div>
           <div className="task-detail__header-actions">
             {!canEdit ? (
@@ -295,23 +334,23 @@ export default function TaskDetail({ taskId, onClose }: TaskDetailProps) {
                   className="field__control"
                   value={draft.assigneeId ?? ''}
                   disabled={!canEdit}
-                  onChange={(event) =>
+                  onChange={(event) => {
+                    const newAssigneeId = event.target.value || undefined
                     setDraft((current) =>
-                      current
-                        ? { ...current, assigneeId: event.target.value || undefined }
-                        : current,
+                      current ? { ...current, assigneeId: newAssigneeId } : current,
                     )
-                  }
-                  onBlur={() => {
-                    void saveField('assigneeId', draft.assigneeId)
+                    // Save immediately; spread with key present so null is sent for unassign
+                    void saveTask({ assigneeId: newAssigneeId })
                   }}
                 >
                   <option value="">Unassigned</option>
-                  {Object.values(users).map((user) => (
-                    <option key={user.id} value={user.id}>
-                      {user.name}
-                    </option>
-                  ))}
+                  {(board?.members ?? [])
+                    .filter((m) => m.isActive)
+                    .map((member) => (
+                      <option key={member.userId} value={member.userId}>
+                        {member.name}
+                      </option>
+                    ))}
                 </select>
               </div>
 
@@ -325,31 +364,56 @@ export default function TaskDetail({ taskId, onClose }: TaskDetailProps) {
               <div className="task-detail__section-header">
                 <h3 id="task-tags-heading">Tags</h3>
               </div>
-              <div className="task-detail__tag-list">
-                {board?.tags.length ? (
-                  board.tags.map((tag) => {
-                    const checked = draft.tags.includes(tag.id)
+
+              {/* Current tags — always visible, even before board fully loads */}
+              {draft.tags.length > 0 && (
+                <div className="task-detail__current-tags">
+                  {draft.tags.map((tagId) => {
+                    const tag = boardTags.find((t) => t.id === tagId)
+                      ?? task.tagObjects?.find((t) => t.id === tagId)
+                    if (!tag) return null
                     return (
-                      <label key={tag.id} className="task-detail__checkbox-chip">
-                        <input
-                          type="checkbox"
-                          checked={checked}
-                          disabled={!canEdit}
-                          onChange={(event: ChangeEvent<HTMLInputElement>) => {
-                            const nextTags = event.target.checked
-                              ? [...draft.tags, tag.id]
-                              : draft.tags.filter((tagId) => tagId !== tag.id)
-                            setDraft((current) => (current ? { ...current, tags: nextTags } : current))
-                            void saveTask({ tags: nextTags })
-                          }}
+                      <span
+                        key={tagId}
+                        className="task-detail__tag-badge"
+                        style={{
+                          background: `${tag.color}22`,
+                          borderColor: `${tag.color}66`,
+                          color: tag.color,
+                        }}
+                      >
+                        <span
+                          className="task-detail__tag-badge-dot"
+                          style={{ background: tag.color }}
                         />
-                        <span>{tag.label}</span>
-                      </label>
+                        {tag.label}
+                      </span>
                     )
-                  })
-                ) : (
-                  <p className="task-detail__muted">This board has no tags yet.</p>
-                )}
+                  })}
+                </div>
+              )}
+
+              {draft.tags.length === 0 && (
+                <p className="task-detail__muted">No tags attached.</p>
+              )}
+
+              {/* Tag picker for managing (add / remove / create) */}
+              <div className="task-detail__tag-picker-wrap">
+                <TagPicker
+                  boardTags={boardTags}
+                  selectedTagIds={[...draft.tags]}
+                  disabled={!canEdit}
+                  onChange={(nextIds) => {
+                    setDraft((cur) => (cur ? { ...cur, tags: nextIds } : cur))
+                    void saveTask({ tags: nextIds })
+                  }}
+                  onCreateTag={async (name, color) => {
+                    const { tagsApi } = await import('@/utils/apiClient')
+                    const res = await tagsApi.create(task.boardId, { label: name, color })
+                    dispatch({ type: 'ADD_TAG', payload: { boardId: task.boardId, tag: res.data } })
+                    return res.data
+                  }}
+                />
               </div>
             </section>
 

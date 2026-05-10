@@ -22,6 +22,7 @@ export interface User {
   email: string
   role: Role
   isActive: boolean
+  isDeleted?: boolean
   avatarUrl?: string
   readonly createdAt: string
 }
@@ -56,8 +57,14 @@ export interface Task {
   description: string
   priority: Priority
   dueDate?: string
+  /** Tag IDs (for filtering / lookup) */
   tags: ReadonlyArray<string>
+  /** Full tag objects embedded from backend response — always in sync */
+  tagObjects?: ReadonlyArray<Tag>
   assigneeId?: string
+  /** Embedded from backend response — avoids separate userMap lookup */
+  assigneeName?: string
+  assigneeAvatarUrl?: string | null
   checklist: ChecklistItem[]
   archived: boolean
   order: number
@@ -85,6 +92,16 @@ export interface Column {
 
 export type CreateColumnInput = Omit<Column, 'id' | 'taskIds'>
 
+/* ─── Board Member ─────────────────────────────────────────────────── */
+
+export interface BoardMember {
+  userId: string
+  name: string
+  email: string
+  avatarUrl?: string | null
+  isActive: boolean
+}
+
 /* ─── Board ───────────────────────────────────────────────────────── */
 
 export interface Board {
@@ -94,6 +111,8 @@ export interface Board {
   columns: Column[]
   tags: Tag[]
   memberIds: ReadonlyArray<string>
+  /** Full member objects — populated after board detail is fetched */
+  members?: ReadonlyArray<BoardMember>
   readonly ownerId: string
   readonly createdAt: string
   updatedAt: string

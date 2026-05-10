@@ -4,12 +4,14 @@
  * Contains: search bar, offline indicator, theme toggle, user badge, logout.
  */
 
-import { useRef } from 'react'
+import { useRef, useState } from 'react'
 import { WifiOff, Sun, Moon, Monitor, LogOut } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import { useTheme } from '@/context/ThemeContext'
 import { Button } from '@/components/ui/Button'
 import '@/styles/layout/Header.css'
+import { ConfirmModal } from '@/components/ui/ConfirmModal'
+import { useNavigate } from 'react-router-dom'
 
 interface HeaderProps {
   searchValue: string
@@ -17,13 +19,20 @@ interface HeaderProps {
   isOnline: boolean
 }
 
+
 export function Header({ searchValue, onSearchChange, isOnline }: HeaderProps) {
   const { state, logout } = useAuth()
   const { theme, setTheme } = useTheme()
+  const navigate = useNavigate()
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
   const searchRef = useRef<HTMLInputElement>(null)
 
   const nextTheme = theme === 'light' ? 'dark' : theme === 'dark' ? 'system' : 'light'
   const ThemeIcon = theme === 'light' ? Sun : theme === 'dark' ? Moon : Monitor
+    const handleLogoutConfirm = () => {
+    logout()
+    navigate('/login')
+  }
 
   return (
     <header className="header" role="banner">
@@ -73,13 +82,26 @@ export function Header({ searchValue, onSearchChange, isOnline }: HeaderProps) {
           variant="ghost"
           size="sm"
           iconOnly
-          onClick={logout}
+          onClick={() => setShowLogoutConfirm(true)}
           aria-label="Log out"
           title="Log out"
         >
           <LogOut size={16} aria-hidden="true" />
         </Button>
       </div>
+
+      {showLogoutConfirm && (
+        <ConfirmModal
+          title="Logout Confirmation"
+          message="Are you sure you want to logout?"
+          confirmLabel="Logout"
+          cancelLabel="Cancel"
+          variant="danger"
+          onConfirm={handleLogoutConfirm}
+          onCancel={() => setShowLogoutConfirm(false)}
+        />
+      )}
+
     </header>
   )
 }

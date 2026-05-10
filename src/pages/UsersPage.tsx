@@ -73,6 +73,7 @@ export function UsersPage() {
   // Reset password dialog
   const [resetTarget, setResetTarget] = useState<User | null>(null)
   const [tempPassword, setTempPassword] = useState<string | null>(null)
+  const [resetError, setResetError] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
   const resetDialogRef = useRef<HTMLDialogElement>(null)
 
@@ -140,7 +141,10 @@ export function UsersPage() {
       const res = await usersApi.create({ ...form })
       setUsers((prev) => [...prev, res.data])
     } else if (editingUser) {
-      const payload: Partial<User> = { name: form.name, email: form.email }
+      const payload: { name: string; email: string; role?: Role } = {
+        name: form.name,
+        email: form.email,
+      }
       // Spec: Cannot change own role
       if (editingUser.id !== currentUserId) payload.role = form.role
       const res = await usersApi.update(editingUser.id, payload)
@@ -181,9 +185,21 @@ export function UsersPage() {
   const handleResetPassword = async (user: User) => {
     setResetTarget(user)
     setTempPassword(null)
+    setResetError(null)
     setCopied(false)
-    const res = await usersApi.resetPassword(user.id)
-    setTempPassword(res.data.temporaryPassword)
+    try {
+      const res = await usersApi.resetPassword(user.id)
+      // Defensively handle both { temporaryPassword } and plain-string responses
+      const pw =
+        typeof res.data === 'string'
+          ? res.data
+          : (res.data as { temporaryPassword?: string })?.temporaryPassword ?? null
+      setTempPassword(pw)
+      if (!pw) setResetError('Password reset succeeded but the server returned no password.')
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Failed to reset password.'
+      setResetError(msg)
+    }
   }
 
   const handleCopy = async () => {
@@ -193,8 +209,9 @@ export function UsersPage() {
     setTimeout(() => setCopied(false), 2000)
   }
 
-  /* ── Filtered list ── */
+  /* ── Filtered list — excludes soft-deleted users ── */
   const filtered = users.filter((u) => {
+    if (u.isDeleted) return false
     const q = searchQuery.toLowerCase()
     if (q && !u.name.toLowerCase().includes(q) && !u.email.toLowerCase().includes(q)) return false
     if (roleFilter !== 'ALL' && u.role !== roleFilter) return false
@@ -393,32 +410,36 @@ export function UsersPage() {
               <span className="field__hint">You cannot change your own role.</span>
             )}
           </div>
-          {/* Password (required on add, optional on edit) */}
-          <div className="field">
-            <label className="field__label" htmlFor="um-password">
-              {dialogMode === 'add' ? 'Password' : 'New password (leave blank to keep current)'}
-            </label>
-            <input
-              id="um-password"
-              type="password"
-              className={`field__control${formErrors.password ? ' field__control--error' : ''}`}
-              value={form.password}
-              onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))}
-              autoComplete="new-password"
-              required={dialogMode === 'add'}
-            />
-            {form.password && (
-              <>
-                <div className="users-page__pw-strength" aria-hidden="true">
-                  <div className="users-page__pw-strength-bar" data-level={String(pwScore)} />
-                </div>
-                <span className="users-page__pw-strength-label">
-                  Strength: {PW_LABELS[pwScore]}
-                </span>
-              </>
-            )}
-            {formErrors.password && <span className="field__error" role="alert">{formErrors.password}</span>}
-          </div>
+          {/* Password — required on add; use Reset Password button for edit */}
+          {dialogMode === 'add' ? (
+            <div className="field">
+              <label className="field__label" htmlFor="um-password">Password</label>
+              <input
+                id="um-password"
+                type="password"
+                className={`field__control${formErrors.password ? ' field__control--error' : ''}`}
+                value={form.password}
+                onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))}
+                autoComplete="new-password"
+                required
+              />
+              {form.password && (
+                <>
+                  <div className="users-page__pw-strength" aria-hidden="true">
+                    <div className="users-page__pw-strength-bar" data-level={String(pwScore)} />
+                  </div>
+                  <span className="users-page__pw-strength-label">
+                    Strength: {PW_LABELS[pwScore]}
+                  </span>
+                </>
+              )}
+              {formErrors.password && <span className="field__error" role="alert">{formErrors.password}</span>}
+            </div>
+          ) : (
+            <p className="field__hint" style={{ margin: 0 }}>
+              To change password, use the <strong>Reset Password</strong> button (↺) in the member row.
+            </p>
+          )}
 
           <div className="users-page__dialog-actions">
             <Button type="submit" variant="primary">
@@ -474,7 +495,11 @@ export function UsersPage() {
           Share this temporary password with <strong>{resetTarget?.name}</strong>.
           They should change it on next login.
         </p>
-        {tempPassword ? (
+        {resetError ? (
+          <p role="alert" style={{ color: 'var(--danger-default)', fontSize: 'var(--text-sm)', margin: '0 0 var(--space-2)' }}>
+            {resetError}
+          </p>
+        ) : tempPassword ? (
           <div className="users-page__temp-pw">
             <span className="users-page__temp-pw-value" aria-label="Temporary password">{tempPassword}</span>
             <Button
@@ -493,7 +518,7 @@ export function UsersPage() {
         <div className="users-page__dialog-actions" style={{ marginTop: 'var(--space-4)' }}>
           <Button
             variant="primary"
-            onClick={() => { setResetTarget(null); setTempPassword(null) }}
+            onClick={() => { setResetTarget(null); setTempPassword(null); setResetError(null) }}
           >
             Done
           </Button>

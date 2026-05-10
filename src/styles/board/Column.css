@@ -6,15 +6,19 @@
 .board-column {
   display: flex;
   flex-direction: column;
-  width: min(340px, 85vw);
-  /* No max-height — column grows naturally with its tasks */
-  padding: var(--space-4);
-  background-color: var(--bg-surface);
+  width: min(320px, 85vw);
+  padding: var(--space-3) var(--space-3) var(--space-4);
+  background-color: var(--bg-subtle);
   border: 1px solid var(--border-default);
   border-radius: var(--radius-xl);
-  box-shadow: var(--shadow-sm);
-  gap: var(--space-4);
+  box-shadow: none;
+  gap: var(--space-3);
   flex-shrink: 0;
+  transition: box-shadow 150ms ease-out;
+}
+
+.board-column:hover {
+  box-shadow: var(--shadow-sm);
 }
 
 .board-column__header {
@@ -22,6 +26,8 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: var(--space-3);
+  padding-bottom: var(--space-2);
+  border-bottom: 2px solid var(--border-default);
 }
 
 .board-column__header-main {
@@ -38,9 +44,11 @@
 
 .board-column__title,
 .board-column__title-input {
-  font-size: var(--text-base);
-  font-weight: var(--font-weight-semibold);
+  font-size: var(--text-sm);
+  font-weight: var(--font-weight-bold);
   color: var(--text-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
 .board-column__title-input,
@@ -50,13 +58,14 @@
   padding: var(--space-2) var(--space-3);
   border: 1px solid var(--border-default);
   border-radius: var(--radius-md);
-  background-color: var(--bg-surface-raised);
+  background-color: var(--bg-surface);
 }
 
 .board-column__actions {
   display: flex;
   align-items: center;
   gap: var(--space-2);
+  flex-shrink: 0;
 }
 
 .board-column__sort-label {
@@ -74,21 +83,38 @@
   padding: var(--space-1) var(--space-2);
   border-radius: var(--radius-md);
   border: 1px solid var(--border-default);
-  background-color: var(--bg-surface-raised);
+  background-color: var(--bg-surface);
+  font-size: var(--text-xs);
+}
+
+/* Task count badge on column header */
+.badge--count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 var(--space-1);
+  border-radius: var(--radius-full);
+  background-color: var(--bg-muted);
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: var(--font-weight-bold);
 }
 
 .board-column__delete {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
-  color: var(--danger-default);
+  width: 26px;
+  height: 26px;
+  color: var(--text-tertiary);
   border-radius: var(--radius-md);
   opacity: 0;
   transition:
     opacity var(--transition-fast),
-    background-color var(--transition-fast);
+    background-color var(--transition-fast),
+    color var(--transition-fast);
 }
 
 .board-column:hover .board-column__delete,
@@ -98,18 +124,19 @@
 
 .board-column__delete:hover {
   background-color: var(--danger-subtle);
+  color: var(--danger-default);
 }
 
 .board-column__body {
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
-  min-height: 120px;
-  /* No overflow-y: auto — tasks expand the column, window scrollbar handles it */
+  gap: var(--space-2);
+  min-height: 80px;
 }
 
 .board-column__footer {
   margin-top: auto;
+  padding-top: var(--space-2);
 }
 
 .board-column__task-form {
@@ -131,11 +158,16 @@
 .board-column__add-task {
   width: 100%;
   justify-content: center;
+  opacity: 0.7;
+  transition: opacity 120ms ease-out;
+}
+
+.board-column:hover .board-column__add-task {
+  opacity: 1;
 }
 
 /* ─── Drag & Drop ─────────────────────────────────────────────────── */
 
-/* Column body drop-target highlight */
 .board-column__body--drop-target {
   background-color: var(--accent-subtle);
   border-radius: var(--radius-md);
@@ -144,13 +176,11 @@
   transition: background-color var(--transition-fast);
 }
 
-/* Slot wrapper — keeps spacing stable during drag */
 .board-column__task-slot {
   display: flex;
   flex-direction: column;
 }
 
-/* Drop indicator line — appears between cards */
 .drop-indicator {
   height: 3px;
   border-radius: var(--radius-full);
@@ -164,7 +194,6 @@
   to   { opacity: 1; transform: scaleX(1);   }
 }
 
-/* Reduced motion */
 @media (prefers-reduced-motion: reduce) {
   .board-column__body--drop-target {
     transition: none;

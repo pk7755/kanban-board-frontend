@@ -1,0 +1,203 @@
+/**
+ * BoardMembersModal.css
+ * Styles for the board member management popup.
+ */
+
+.board-members-modal {
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-xl);
+  padding: 0;
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  box-shadow: var(--shadow-xl);
+  width: min(480px, 95vw);
+  max-height: 80vh;
+  margin: auto;
+  display: flex;
+  flex-direction: column;
+  animation: bm-modal-in 200ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.board-members-modal::backdrop {
+  background-color: var(--bg-overlay);
+  animation: bm-backdrop-in 180ms ease both;
+}
+
+@keyframes bm-modal-in {
+  from { opacity: 0; transform: scale(0.95) translateY(-8px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+@keyframes bm-backdrop-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* ── Header ── */
+.board-members-modal__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-4) var(--space-6);
+  border-bottom: 1px solid var(--border-subtle);
+  flex-shrink: 0;
+}
+
+.board-members-modal__title {
+  font-size: var(--text-lg);
+  font-weight: var(--font-weight-semibold);
+  margin: 0;
+}
+
+.board-members-modal__count {
+  font-weight: var(--font-weight-normal);
+  color: var(--text-tertiary);
+  font-size: var(--text-base);
+}
+
+.board-members-modal__close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: var(--space-1);
+  transition: background 150ms, color 150ms;
+}
+
+.board-members-modal__close:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+/* ── Member list ── */
+.board-members-modal__list {
+  list-style: none;
+  margin: 0;
+  padding: var(--space-2) 0;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.board-members-modal__member {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-6);
+  transition: background 120ms;
+}
+
+.board-members-modal__member:hover {
+  background: var(--bg-hover);
+}
+
+.board-members-modal__avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--accent-default);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--text-xs);
+  font-weight: var(--font-weight-semibold);
+  flex-shrink: 0;
+}
+
+.board-members-modal__info {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  flex: 1;
+  min-width: 0;
+}
+
+.board-members-modal__name {
+  font-size: var(--text-sm);
+  font-weight: var(--font-weight-medium);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.board-members-modal__owner-tag {
+  font-weight: var(--font-weight-normal);
+  color: var(--text-tertiary);
+  font-size: var(--text-xs);
+}
+
+.board-members-modal__email {
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.board-members-modal__status {
+  font-size: var(--text-xs);
+  font-weight: var(--font-weight-medium);
+  padding: 2px 8px;
+  border-radius: 99px;
+  flex-shrink: 0;
+}
+
+.board-members-modal__status--active {
+  background: color-mix(in srgb, var(--success-default) 15%, transparent);
+  color: var(--success-default);
+}
+
+.board-members-modal__status--inactive {
+  background: color-mix(in srgb, var(--text-tertiary) 12%, transparent);
+  color: var(--text-tertiary);
+}
+
+.board-members-modal__empty {
+  padding: var(--space-6);
+  text-align: center;
+  color: var(--text-tertiary);
+  font-size: var(--text-sm);
+}
+
+/* ── Add form ── */
+.board-members-modal__add-form {
+  padding: var(--space-3) var(--space-6) var(--space-4);
+  border-top: 1px solid var(--border-subtle);
+  flex-shrink: 0;
+}
+
+.board-members-modal__add-row {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.board-members-modal__add-input {
+  flex: 1;
+  height: 36px;
+  padding: 0 var(--space-3);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  background: var(--bg-input);
+  color: var(--text-primary);
+  font-size: var(--text-sm);
+  outline: none;
+  transition: border-color 150ms;
+}
+
+.board-members-modal__add-input:focus {
+  border-color: var(--accent-default);
+}
+
+.board-members-modal__add-input::placeholder {
+  color: var(--text-placeholder);
+}
+
+.board-members-modal__add-error {
+  margin: var(--space-2) 0 0;
+  font-size: var(--text-xs);
+  color: var(--danger-default);
+}

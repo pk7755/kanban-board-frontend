@@ -15,7 +15,7 @@ import {
   type ReactNode,
 } from 'react'
 import type { BoardAction } from '@/types/actions'
-import type { Board, Column, CreateBoardInput, CreateColumnInput, CreateTaskInput, Tag, Task, TaskMap } from '@/types/entities'
+import type { Board, BoardMember, Column, CreateBoardInput, CreateColumnInput, CreateTaskInput, Tag, Task, TaskMap } from '@/types/entities'
 import { boardsApi, tasksApi, tagsApi } from '@/utils/api'
 import { loadState, saveState, STORAGE_VERSION } from '@/utils/storage'
 
@@ -47,7 +47,7 @@ interface BoardContextValue {
 type InternalBoardAction =
   | BoardAction
   | { type: 'HYDRATE_BOARD_TASKS'; payload: { boardId: string; tasks: Task[] } }
-  | { type: 'HYDRATE_BOARD_DETAIL'; payload: { boardId: string; columns: Column[]; tags: Tag[] } }
+  | { type: 'HYDRATE_BOARD_DETAIL'; payload: { boardId: string; columns: Column[]; tags: Tag[]; memberIds: string[]; members: BoardMember[] } }
   | { type: 'SET_LOADING'; payload: { isLoading: boolean } }
   | { type: 'SET_ERROR'; payload: { error: string | null } }
   | { type: 'SET_ACTIVE_BOARD_ID'; payload: { boardId: string | null } }
@@ -184,6 +184,8 @@ function boardReducer(state: BoardState, action: InternalBoardAction): BoardStat
                   taskIds: board.columns.find((c) => c.id === col.id)?.taskIds ?? [],
                 })),
                 tags: action.payload.tags,
+                memberIds: action.payload.memberIds,
+                members: action.payload.members,
               }
             : board,
         ),
@@ -363,6 +365,7 @@ function boardReducer(state: BoardState, action: InternalBoardAction): BoardStat
     case 'MOVE_TASK': {
       const task = state.tasks[action.payload.taskId]
       if (!task) return state
+      const isSameColumn = action.payload.fromColumnId === action.payload.toColumnId
       return {
         ...state,
         tasks: {
@@ -377,6 +380,13 @@ function boardReducer(state: BoardState, action: InternalBoardAction): BoardStat
         boards: updateBoard(state.boards, task.boardId, (board) => ({
           ...board,
           columns: board.columns.map((column) => {
+            if (isSameColumn) {
+              if (column.id !== action.payload.toColumnId) return column
+              // Same-column reorder: remove from old position, insert at new
+              const nextTaskIds = removeTaskId(column.taskIds, task.id)
+              nextTaskIds.splice(action.payload.toIndex, 0, task.id)
+              return { ...column, taskIds: nextTaskIds }
+            }
             if (column.id === action.payload.fromColumnId) {
               return { ...column, taskIds: removeTaskId(column.taskIds, task.id) }
             }
@@ -426,6 +436,15 @@ function boardReducer(state: BoardState, action: InternalBoardAction): BoardStat
           updatedAt: new Date().toISOString(),
         })),
       }
+    case 'UPDATE_TAG':
+      return {
+        ...state,
+        boards: updateBoard(state.boards, action.payload.boardId, (board) => ({
+          ...board,
+          tags: board.tags.map((t) => (t.id === action.payload.tag.id ? action.payload.tag : t)),
+          updatedAt: new Date().toISOString(),
+        })),
+      }
     case 'DELETE_TAG':
       return {
         ...state,
@@ -434,6 +453,15 @@ function boardReducer(state: BoardState, action: InternalBoardAction): BoardStat
           tags: board.tags.filter((tag) => tag.id !== action.payload.tagId),
           updatedAt: new Date().toISOString(),
         })),
+      }
+    case 'UPDATE_BOARD_MEMBERS':
+      return {
+        ...state,
+        boards: state.boards.map((board) =>
+          board.id === action.payload.boardId
+            ? { ...board, memberIds: action.payload.memberIds, members: action.payload.members }
+            : board,
+        ),
       }
     case 'IMPORT_BOARD': {
       const nextBoard = buildBoard(action.payload.board as CreateBoardInput & { id: string; ownerId: string })
@@ -526,7 +554,13 @@ export function BoardProvider({ children }: { children: ReactNode }) {
       ])
       internalDispatch({
         type: 'HYDRATE_BOARD_DETAIL',
-        payload: { boardId, columns: boardDetail.data.columns, tags: tagsResponse.data },
+        payload: {
+          boardId,
+          columns: boardDetail.data.columns,
+          tags: tagsResponse.data,
+          memberIds: boardDetail.data.memberIds as string[],
+          members: (boardDetail.data.members ?? []) as BoardMember[],
+        },
       })
       internalDispatch({ type: 'HYDRATE_BOARD_TASKS', payload: { boardId, tasks: tasksResponse.data } })
     } catch {

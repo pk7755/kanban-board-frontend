@@ -12,6 +12,7 @@ const useMock = import.meta.env.VITE_USE_MOCK === 'true'
 
 export const authApi = useMock ? mock.authApi : real.authApi
 export const boardsApi = useMock ? mock.boardsApi : real.boardsApi
+export const boardMembersApi = real.boardMembersApi
 export const columnsApi = useMock ? mock.columnsApi : real.columnsApi
 export const tasksApi = useMock ? mock.tasksApi : real.tasksApi
 export const tagsApi = useMock ? mock.tagsApi : real.tagsApi

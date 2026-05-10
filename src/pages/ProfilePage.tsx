@@ -162,9 +162,9 @@ export default function ProfilePage() {
     setPasswordSaving(true)
 
     try {
-      await usersApi.changePassword(
+      await usersApi.updateMe(
         user.id,
-        { currentPassword, newPassword },
+        { currentPassword, password: newPassword },
         { signal: abortRef.current.signal },
       )
       setCurrentPassword('')

@@ -3,10 +3,12 @@
  * App sidebar — board list, nav links, user info.
  */
 
+import { useState } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
-import { LayoutDashboard, Users, Plus, Trash2 } from 'lucide-react'
+import { LayoutDashboard, Users, Plus, Trash2, LogOut } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import { Button } from '@/components/ui/Button'
+import { ConfirmModal } from '@/components/ui/ConfirmModal'
 import type { Board } from '@/types/entities'
 import '@/styles/layout/Sidebar.css'
 
@@ -41,9 +43,10 @@ function SidebarAvatar({ name, avatarUrl }: { name: string; avatarUrl?: string }
 }
 
 export function Sidebar({ boards, activeBoardId, onNewBoard, onDeleteBoard }: SidebarProps) {
-  const { state } = useAuth()
+  const { state, logout } = useAuth()
   const navigate = useNavigate()
   const isManager = state.user?.role === 'MANAGER'
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
 
   const handleDelete = async (e: React.MouseEvent, board: Board) => {
     e.preventDefault()
@@ -55,6 +58,11 @@ export function Sidebar({ boards, activeBoardId, onNewBoard, onDeleteBoard }: Si
       const remaining = boards.filter((b) => b.id !== board.id)
       navigate(remaining[0] ? `/boards/${remaining[0].id}` : '/boards')
     }
+  }
+
+  const handleLogoutConfirm = () => {
+    logout()
+    navigate('/login')
   }
 
   return (
@@ -141,9 +149,31 @@ export function Sidebar({ boards, activeBoardId, onNewBoard, onDeleteBoard }: Si
             <div className="sidebar__user-role">
               {state.user.role === 'MANAGER' ? 'Manager' : 'Team Member'}
             </div>
+            <button
+              type="button"
+              className="sidebar__logout-btn"
+              onClick={() => setShowLogoutConfirm(true)}
+              aria-label="Logout"
+            >
+              <LogOut size={14} aria-hidden="true" />
+              Logout
+            </button>
           </>
         )}
       </div>
+
+      {showLogoutConfirm && (
+        <ConfirmModal
+          title="Logout Confirmation"
+          message="Are you sure you want to logout?"
+          confirmLabel="Logout"
+          cancelLabel="Cancel"
+          variant="danger"
+          onConfirm={handleLogoutConfirm}
+          onCancel={() => setShowLogoutConfirm(false)}
+        />
+      )}
     </aside>
   )
 }
+

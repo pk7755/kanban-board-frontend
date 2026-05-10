@@ -15,8 +15,15 @@ export interface FilterState {
   priorities: Priority[]
   /** Active tag id filters — empty array means "show all" */
   tagIds: string[]
-  /** Filter to a single assignee — null means "show all" */
-  assigneeId: string | null
+  /**
+   * Filter by multiple assignees. Each entry is either a user id or the
+   * special token "__unassigned__". Empty array means "show all".
+   */
+  assigneeIds: string[]
+  /**
+   * Filter by column ids (status). Empty array means "show all".
+   */
+  columnIds: string[]
   /** Show only tasks whose due date is before this ISO date */
   dueBefore: string | null
   /** Show only tasks whose due date is after this ISO date */
@@ -28,7 +35,8 @@ export interface FilterState {
 export const EMPTY_FILTER: FilterState = {
   priorities: [],
   tagIds: [],
-  assigneeId: null,
+  assigneeIds: [],
+  columnIds: [],
   dueBefore: null,
   dueAfter: null,
   overdueOnly: false,
@@ -38,7 +46,8 @@ export function isFilterActive(f: FilterState): boolean {
   return (
     f.priorities.length > 0 ||
     f.tagIds.length > 0 ||
-    f.assigneeId !== null ||
+    f.assigneeIds.length > 0 ||
+    f.columnIds.length > 0 ||
     f.dueBefore !== null ||
     f.dueAfter !== null ||
     f.overdueOnly
@@ -51,6 +60,8 @@ interface FilterContextValue {
   filter: FilterState
   setFilter: (patch: Partial<FilterState>) => void
   clearFilter: () => void
+  /** Remove stale member IDs from assigneeIds (call after member deletion) */
+  pruneAssigneeIds: (validIds: string[]) => void
   isActive: boolean
 }
 
@@ -67,9 +78,17 @@ export function FilterProvider({ children }: { children: ReactNode }) {
 
   const clearFilter = useCallback(() => setFilterState(EMPTY_FILTER), [])
 
+  const pruneAssigneeIds = useCallback((validIds: string[]) => {
+    setFilterState((prev) => {
+      const next = prev.assigneeIds.filter((id) => id === '__unassigned__' || validIds.includes(id))
+      if (next.length === prev.assigneeIds.length) return prev
+      return { ...prev, assigneeIds: next }
+    })
+  }, [])
+
   return (
     <FilterContext.Provider
-      value={{ filter, setFilter, clearFilter, isActive: isFilterActive(filter) }}
+      value={{ filter, setFilter, clearFilter, pruneAssigneeIds, isActive: isFilterActive(filter) }}
     >
       {children}
     </FilterContext.Provider>
