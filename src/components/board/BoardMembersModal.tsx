@@ -94,7 +94,15 @@ export function BoardMembersModal({
   }
 
   return (
-    <dialog ref={dialogRef} className="board-members-modal" aria-labelledby="bm-modal-title" aria-modal="true" onClick={(e) => { void handleBackdropClick(e) }}>
+    <dialog
+      ref={dialogRef}
+      className="board-members-modal"
+      aria-labelledby="bm-modal-title"
+      aria-modal="true"
+      onClick={(e) => {
+        void handleBackdropClick(e)
+      }}
+    >
       <div className="board-members-modal__header">
         <h2 id="bm-modal-title" className="board-members-modal__title">
           Board Members <span className="board-members-modal__count">({members.length})</span>
@@ -119,14 +127,18 @@ export function BoardMembersModal({
               </span>
               <span className="board-members-modal__email">{member.email}</span>
             </div>
-            <span className={`board-members-modal__status board-members-modal__status--${member.isActive ? 'active' : 'inactive'}`}>
+            <span
+              className={`board-members-modal__status board-members-modal__status--${member.isActive ? 'active' : 'inactive'}`}
+            >
               {member.isActive ? 'Active' : 'Inactive'}
             </span>
             {isManager && member.userId !== ownerId && member.userId !== currentUserId && (
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => { void handleRemove(member.userId) }}
+                onClick={() => {
+                  void handleRemove(member.userId)
+                }}
                 disabled={removingId === member.userId}
                 aria-label={`Remove ${member.name} from board`}
                 title="Remove from board"
@@ -136,13 +148,17 @@ export function BoardMembersModal({
             )}
           </li>
         ))}
-        {members.length === 0 && (
-          <li className="board-members-modal__empty">No members yet.</li>
-        )}
+        {members.length === 0 && <li className="board-members-modal__empty">No members yet.</li>}
       </ul>
 
       {isManager && (
-        <form className="board-members-modal__add-form" onSubmit={(e) => { void handleAdd(e) }} noValidate>
+        <form
+          className="board-members-modal__add-form"
+          onSubmit={(e) => {
+            void handleAdd(e)
+          }}
+          noValidate
+        >
           <div className="board-members-modal__add-row">
             <input
               type="email"
@@ -153,13 +169,20 @@ export function BoardMembersModal({
               disabled={isAdding}
               aria-label="Add member by email"
             />
-            <Button type="submit" variant="primary" size="sm" disabled={isAdding || !addEmail.trim()}>
+            <Button
+              type="submit"
+              variant="primary"
+              size="sm"
+              disabled={isAdding || !addEmail.trim()}
+            >
               <UserPlus size={14} aria-hidden="true" />
               {isAdding ? 'Adding…' : 'Add'}
             </Button>
           </div>
           {addError && (
-            <p className="board-members-modal__add-error" role="alert">{addError}</p>
+            <p className="board-members-modal__add-error" role="alert">
+              {addError}
+            </p>
           )}
         </form>
       )}

@@ -41,7 +41,7 @@ export function ConfirmModal({
     return () => {
       if (dialog.open) dialog.close()
     }
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [])
 
   /** Effect 2 — intercept ESC and route through onCancel */
   useEffect(() => {
@@ -56,17 +56,19 @@ export function ConfirmModal({
   }, [isLoading, onCancel])
 
   return (
-    <dialog ref={dialogRef} className="confirm-modal" aria-labelledby="confirm-modal-title" aria-modal="true">
+    <dialog
+      ref={dialogRef}
+      className="confirm-modal"
+      aria-labelledby="confirm-modal-title"
+      aria-modal="true"
+    >
       <div className="confirm-modal__content">
-        <h2 id="confirm-modal-title" className="confirm-modal__title">{title}</h2>
+        <h2 id="confirm-modal-title" className="confirm-modal__title">
+          {title}
+        </h2>
         <p className="confirm-modal__message">{message}</p>
         <div className="confirm-modal__actions">
-          <Button
-            variant={variant}
-            onClick={onConfirm}
-            disabled={isLoading}
-            aria-busy={isLoading}
-          >
+          <Button variant={variant} onClick={onConfirm} disabled={isLoading} aria-busy={isLoading}>
             {confirmLabel}
           </Button>
           <Button variant="ghost" onClick={onCancel} disabled={isLoading}>

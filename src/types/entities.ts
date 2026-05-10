@@ -57,10 +57,8 @@ export interface Task {
   description: string
   priority: Priority
   dueDate?: string
-  /** Tag IDs (for filtering / lookup) */
-  tags: ReadonlyArray<string>
-  /** Full tag objects embedded from backend response — always in sync */
-  tagObjects?: ReadonlyArray<Tag>
+  /** Fully resolved tag objects (id + label + color) — always in sync with backend */
+  tags: ReadonlyArray<Tag>
   assigneeId?: string
   /** Embedded from backend response — avoids separate userMap lookup */
   assigneeName?: string

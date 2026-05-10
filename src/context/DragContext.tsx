@@ -38,9 +38,7 @@ export function DragProvider({ children }: { children: ReactNode }) {
   }, [])
 
   return (
-    <DragContext.Provider
-      value={{ ...drag, isDragging: drag.taskId !== null, startDrag, endDrag }}
-    >
+    <DragContext.Provider value={{ ...drag, isDragging: drag.taskId !== null, startDrag, endDrag }}>
       {children}
     </DragContext.Provider>
   )

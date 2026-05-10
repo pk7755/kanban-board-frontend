@@ -57,7 +57,10 @@ export type BoardAction =
   | { type: 'DELETE_TAG'; payload: { boardId: string; tagId: string } }
 
   /* Board member management */
-  | { type: 'UPDATE_BOARD_MEMBERS'; payload: { boardId: string; memberIds: string[]; members: import('./entities').BoardMember[] } }
+  | {
+      type: 'UPDATE_BOARD_MEMBERS'
+      payload: { boardId: string; memberIds: string[]; members: import('./entities').BoardMember[] }
+    }
 
   /* Import */
   | { type: 'IMPORT_BOARD'; payload: { board: Board; tasks: Task[] } }

@@ -25,8 +25,7 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   static getDerivedStateFromError(error: unknown): State {
-    const message =
-      error instanceof Error ? error.message : 'An unexpected error occurred.'
+    const message = error instanceof Error ? error.message : 'An unexpected error occurred.'
     return { hasError: true, message }
   }
 
@@ -59,11 +58,26 @@ export class ErrorBoundary extends Component<Props, State> {
             color: 'var(--text-primary)',
           }}
         >
-          <span style={{ fontSize: '2.5rem' }} aria-hidden="true">😵</span>
-          <h2 style={{ fontSize: 'var(--text-xl)', fontWeight: 'var(--font-weight-semibold)', margin: 0 }}>
+          <span style={{ fontSize: '2.5rem' }} aria-hidden="true">
+            😵
+          </span>
+          <h2
+            style={{
+              fontSize: 'var(--text-xl)',
+              fontWeight: 'var(--font-weight-semibold)',
+              margin: 0,
+            }}
+          >
             Something went wrong
           </h2>
-          <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', maxWidth: '40ch', margin: 0 }}>
+          <p
+            style={{
+              fontSize: 'var(--text-sm)',
+              color: 'var(--text-secondary)',
+              maxWidth: '40ch',
+              margin: 0,
+            }}
+          >
             {this.state.message}
           </p>
           <button

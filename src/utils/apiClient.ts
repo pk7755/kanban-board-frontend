@@ -167,7 +167,11 @@ export const boardsApi = {
   },
 
   /** PATCH /boards/:id — backend field is `name`, not `title` */
-  rename: async (boardId: string, title: string, options?: RequestOptions): Promise<ApiResponse<Board>> => {
+  rename: async (
+    boardId: string,
+    title: string,
+    options?: RequestOptions,
+  ): Promise<ApiResponse<Board>> => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const raw = await requestW<any>(
       `/boards/${boardId}`,
@@ -184,7 +188,11 @@ export const boardsApi = {
 /* ─── Board Members ───────────────────────────────────────────────── */
 export const boardMembersApi = {
   /** POST /boards/:boardId/members — add member by email */
-  add: async (boardId: string, email: string, options?: RequestOptions): Promise<{ message: string }> => {
+  add: async (
+    boardId: string,
+    email: string,
+    options?: RequestOptions,
+  ): Promise<{ message: string }> => {
     return request<{ message: string }>(
       `/boards/${boardId}/members`,
       { method: 'POST', body: JSON.stringify({ email }) },
@@ -194,7 +202,11 @@ export const boardMembersApi = {
 
   /** DELETE /boards/:boardId/members/:userId */
   remove: (boardId: string, userId: string, options?: RequestOptions) =>
-    request<{ message: string }>(`/boards/${boardId}/members/${userId}`, { method: 'DELETE' }, options),
+    request<{ message: string }>(
+      `/boards/${boardId}/members/${userId}`,
+      { method: 'DELETE' },
+      options,
+    ),
 }
 
 /* ─── Columns ─────────────────────────────────────────────────────── */
@@ -235,7 +247,11 @@ export const columnsApi = {
     options?: RequestOptions,
   ): Promise<void> => {
     const items = columnIds.map((id, i) => ({ id, position: i + 1 }))
-    await request<unknown>('/columns/reorder', { method: 'PATCH', body: JSON.stringify(items) }, options)
+    await request<unknown>(
+      '/columns/reorder',
+      { method: 'PATCH', body: JSON.stringify(items) },
+      options,
+    )
   },
 
   delete: (columnId: string, options?: RequestOptions) =>
@@ -265,7 +281,11 @@ export const tasksApi = {
   ): Promise<ApiResponse<Task>> => {
     const body = adaptTaskCreatePayload(data)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const raw = await requestW<any>('/tasks', { method: 'POST', body: JSON.stringify(body) }, options)
+    const raw = await requestW<any>(
+      '/tasks',
+      { method: 'POST', body: JSON.stringify(body) },
+      options,
+    )
     return { data: adaptTask(raw, data.boardId) }
   },
 
@@ -288,13 +308,37 @@ export const tasksApi = {
     request<void>(`/tasks/${taskId}`, { method: 'DELETE' }, options),
 
   /** PATCH /tasks/:id/move — converts frontend {toColumnId, toIndex} to backend {columnId, position} */
-  move: async (
-    taskId: string,
-    data: MoveTaskRequest,
-    options?: RequestOptions,
-  ): Promise<void> => {
+  move: async (taskId: string, data: MoveTaskRequest, options?: RequestOptions): Promise<void> => {
     const body = adaptMoveTaskPayload(data.toColumnId, data.toIndex)
-    await request<unknown>(`/tasks/${taskId}/move`, { method: 'PATCH', body: JSON.stringify(body) }, options)
+    await request<unknown>(
+      `/tasks/${taskId}/move`,
+      { method: 'PATCH', body: JSON.stringify(body) },
+      options,
+    )
+  },
+
+  /** POST /tasks/:taskId/tags/:tagId — attach existing tag (idempotent) */
+  attachTag: async (
+    taskId: string,
+    tagId: string,
+    boardId: string,
+    options?: RequestOptions,
+  ): Promise<ApiResponse<Task>> => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const raw = await requestW<any>(`/tasks/${taskId}/tags/${tagId}`, { method: 'POST' }, options)
+    return { data: adaptTask(raw, boardId) }
+  },
+
+  /** DELETE /tasks/:taskId/tags/:tagId — detach tag (tag itself is NOT deleted) */
+  detachTag: async (
+    taskId: string,
+    tagId: string,
+    boardId: string,
+    options?: RequestOptions,
+  ): Promise<ApiResponse<Task>> => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const raw = await requestW<any>(`/tasks/${taskId}/tags/${tagId}`, { method: 'DELETE' }, options)
+    return { data: adaptTask(raw, boardId) }
   },
 }
 
@@ -348,14 +392,25 @@ export const usersApi = {
     return { data: paginated.data }
   },
 
-  create: async (data: Partial<User> & { password: string }, options?: RequestOptions): Promise<ApiResponse<User>> => {
+  create: async (
+    data: Partial<User> & { password: string },
+    options?: RequestOptions,
+  ): Promise<ApiResponse<User>> => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const raw = await requestW<any>('/users', { method: 'POST', body: JSON.stringify(data) }, options)
+    const raw = await requestW<any>(
+      '/users',
+      { method: 'POST', body: JSON.stringify(data) },
+      options,
+    )
     return { data: raw }
   },
 
   /** Update a team member's name, email, or role (PATCH /users/team/:id) */
-  update: async (userId: string, data: { name?: string; email?: string; role?: string }, options?: RequestOptions): Promise<ApiResponse<User>> => {
+  update: async (
+    userId: string,
+    data: { name?: string; email?: string; role?: string },
+    options?: RequestOptions,
+  ): Promise<ApiResponse<User>> => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const raw = await requestW<any>(
       `/users/team/${userId}`,
@@ -390,8 +445,15 @@ export const usersApi = {
   delete: (userId: string, options?: RequestOptions) =>
     request<void>(`/users/team/${userId}`, { method: 'DELETE' }, options),
 
-  resetPassword: async (userId: string, options?: RequestOptions): Promise<ApiResponse<{ temporaryPassword: string }>> => {
-    const raw = await requestW<{ tempPassword: string }>(`/users/team/${userId}/reset-password`, { method: 'POST' }, options)
+  resetPassword: async (
+    userId: string,
+    options?: RequestOptions,
+  ): Promise<ApiResponse<{ temporaryPassword: string }>> => {
+    const raw = await requestW<{ tempPassword: string }>(
+      `/users/team/${userId}/reset-password`,
+      { method: 'POST' },
+      options,
+    )
     return { data: { temporaryPassword: raw.tempPassword } }
   },
 

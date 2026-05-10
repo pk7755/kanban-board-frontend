@@ -75,7 +75,10 @@
   cursor: pointer;
   padding: 4px 10px;
   border-radius: var(--radius-full);
-  transition: background 120ms, color 120ms, border-color 120ms;
+  transition:
+    background 120ms,
+    color 120ms,
+    border-color 120ms;
   font-weight: var(--font-weight-medium);
 }
 

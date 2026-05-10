@@ -15,7 +15,17 @@ import {
   type ReactNode,
 } from 'react'
 import type { BoardAction } from '@/types/actions'
-import type { Board, BoardMember, Column, CreateBoardInput, CreateColumnInput, CreateTaskInput, Tag, Task, TaskMap } from '@/types/entities'
+import type {
+  Board,
+  BoardMember,
+  Column,
+  CreateBoardInput,
+  CreateColumnInput,
+  CreateTaskInput,
+  Tag,
+  Task,
+  TaskMap,
+} from '@/types/entities'
 import { boardsApi, tasksApi, tagsApi } from '@/utils/api'
 import { loadState, saveState, STORAGE_VERSION } from '@/utils/storage'
 
@@ -47,7 +57,16 @@ interface BoardContextValue {
 type InternalBoardAction =
   | BoardAction
   | { type: 'HYDRATE_BOARD_TASKS'; payload: { boardId: string; tasks: Task[] } }
-  | { type: 'HYDRATE_BOARD_DETAIL'; payload: { boardId: string; columns: Column[]; tags: Tag[]; memberIds: string[]; members: BoardMember[] } }
+  | {
+      type: 'HYDRATE_BOARD_DETAIL'
+      payload: {
+        boardId: string
+        columns: Column[]
+        tags: Tag[]
+        memberIds: string[]
+        members: BoardMember[]
+      }
+    }
   | { type: 'SET_LOADING'; payload: { isLoading: boolean } }
   | { type: 'SET_ERROR'; payload: { error: string | null } }
   | { type: 'SET_ACTIVE_BOARD_ID'; payload: { boardId: string | null } }
@@ -118,11 +137,7 @@ function buildTask(payload: CreateTaskInput & { id: string }, fallbackOrder: num
   }
 }
 
-function updateBoard(
-  boards: Board[],
-  boardId: string,
-  updater: (board: Board) => Board,
-): Board[] {
+function updateBoard(boards: Board[], boardId: string, updater: (board: Board) => Board): Board[] {
   return boards.map((board) => (board.id === boardId ? updater(board) : board))
 }
 
@@ -232,7 +247,9 @@ function boardReducer(state: BoardState, action: InternalBoardAction): BoardStat
         boards: remainingBoards,
         tasks: remainingTasks,
         activeBoardId:
-          state.activeBoardId === action.payload.boardId ? (remainingBoards[0]?.id ?? null) : state.activeBoardId,
+          state.activeBoardId === action.payload.boardId
+            ? (remainingBoards[0]?.id ?? null)
+            : state.activeBoardId,
       }
     }
     case 'ADD_COLUMN': {
@@ -252,7 +269,9 @@ function boardReducer(state: BoardState, action: InternalBoardAction): BoardStat
         boards: state.boards.map((board) => ({
           ...board,
           columns: board.columns.map((column) =>
-            column.id === action.payload.columnId ? { ...column, title: action.payload.title } : column,
+            column.id === action.payload.columnId
+              ? { ...column, title: action.payload.title }
+              : column,
           ),
         })),
       }
@@ -260,8 +279,7 @@ function boardReducer(state: BoardState, action: InternalBoardAction): BoardStat
       const columnTaskIds = new Set(
         state.boards
           .find((board) => board.id === action.payload.boardId)
-          ?.columns.find((column) => column.id === action.payload.columnId)
-          ?.taskIds ?? [],
+          ?.columns.find((column) => column.id === action.payload.columnId)?.taskIds ?? [],
       )
       const nextTasks = Object.fromEntries(
         Object.entries(state.tasks).filter(([taskId, task]) => {
@@ -358,7 +376,11 @@ function boardReducer(state: BoardState, action: InternalBoardAction): BoardStat
         ...state,
         tasks: {
           ...state.tasks,
-          [action.payload.taskId]: { ...currentTask, archived: true, updatedAt: new Date().toISOString() },
+          [action.payload.taskId]: {
+            ...currentTask,
+            archived: true,
+            updatedAt: new Date().toISOString(),
+          },
         },
       }
     }
@@ -412,7 +434,9 @@ function boardReducer(state: BoardState, action: InternalBoardAction): BoardStat
           boards: updateBoard(state.boards, locatedBoard.id, (board) => ({
             ...board,
             columns: board.columns.map((column) =>
-              column.id === action.payload.columnId ? { ...column, taskIds: [...action.payload.taskIds] } : column,
+              column.id === action.payload.columnId
+                ? { ...column, taskIds: [...action.payload.taskIds] }
+                : column,
             ),
           })),
         }
@@ -422,7 +446,9 @@ function boardReducer(state: BoardState, action: InternalBoardAction): BoardStat
         boards: updateBoard(state.boards, boardId, (board) => ({
           ...board,
           columns: board.columns.map((column) =>
-            column.id === action.payload.columnId ? { ...column, taskIds: [...action.payload.taskIds] } : column,
+            column.id === action.payload.columnId
+              ? { ...column, taskIds: [...action.payload.taskIds] }
+              : column,
           ),
         })),
       }
@@ -464,7 +490,9 @@ function boardReducer(state: BoardState, action: InternalBoardAction): BoardStat
         ),
       }
     case 'IMPORT_BOARD': {
-      const nextBoard = buildBoard(action.payload.board as CreateBoardInput & { id: string; ownerId: string })
+      const nextBoard = buildBoard(
+        action.payload.board as CreateBoardInput & { id: string; ownerId: string },
+      )
       const mergedTasks = { ...state.tasks }
       action.payload.tasks.forEach((task) => {
         mergedTasks[task.id] = task
@@ -562,7 +590,10 @@ export function BoardProvider({ children }: { children: ReactNode }) {
           members: (boardDetail.data.members ?? []) as BoardMember[],
         },
       })
-      internalDispatch({ type: 'HYDRATE_BOARD_TASKS', payload: { boardId, tasks: tasksResponse.data } })
+      internalDispatch({
+        type: 'HYDRATE_BOARD_TASKS',
+        payload: { boardId, tasks: tasksResponse.data },
+      })
     } catch {
       internalDispatch({ type: 'SET_ERROR', payload: { error: 'Unable to load board tasks.' } })
     } finally {
@@ -591,7 +622,10 @@ export function BoardProvider({ children }: { children: ReactNode }) {
   })
 
   // Undo/redo stacks — each entry is a { snapshot, description } pair
-  interface HistoryEntry { snapshot: BoardState; description: string }
+  interface HistoryEntry {
+    snapshot: BoardState
+    description: string
+  }
   const undoStackRef = useRef<HistoryEntry[]>([])
   const redoStackRef = useRef<HistoryEntry[]>([])
   // Track flags as real state so they can be read during render without accessing refs
@@ -612,10 +646,7 @@ export function BoardProvider({ children }: { children: ReactNode }) {
           snapshot: stateRef.current,
           description: UNDO_DESCRIPTIONS[action.type] ?? 'Action',
         }
-        undoStackRef.current = [
-          ...undoStackRef.current.slice(-MAX_UNDO_HISTORY + 1),
-          entry,
-        ]
+        undoStackRef.current = [...undoStackRef.current.slice(-MAX_UNDO_HISTORY + 1), entry]
         redoStackRef.current = [] // clear redo on new action
         syncFlags()
       }
@@ -675,7 +706,18 @@ export function BoardProvider({ children }: { children: ReactNode }) {
       canRedo,
       lastUndoDescription,
     }),
-    [activeBoard, activeTasks, canUndo, canRedo, dispatch, lastUndoDescription, loadBoardTasks, redo, state, undo],
+    [
+      activeBoard,
+      activeTasks,
+      canUndo,
+      canRedo,
+      dispatch,
+      lastUndoDescription,
+      loadBoardTasks,
+      redo,
+      state,
+      undo,
+    ],
   )
 
   return <BoardContext.Provider value={value}>{children}</BoardContext.Provider>

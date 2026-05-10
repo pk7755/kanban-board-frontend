@@ -51,15 +51,31 @@
 
 /* ─── Variants ───────────────────────────────────────────────────── */
 
-.toast--success .toast__icon { color: var(--success-default); }
-.toast--error   .toast__icon { color: var(--danger-default);  }
-.toast--warning .toast__icon { color: var(--warning-default); }
-.toast--info    .toast__icon { color: var(--accent-default);  }
+.toast--success .toast__icon {
+  color: var(--success-default);
+}
+.toast--error .toast__icon {
+  color: var(--danger-default);
+}
+.toast--warning .toast__icon {
+  color: var(--warning-default);
+}
+.toast--info .toast__icon {
+  color: var(--accent-default);
+}
 
-.toast--success { border-left: 3px solid var(--success-default); }
-.toast--error   { border-left: 3px solid var(--danger-default);  }
-.toast--warning { border-left: 3px solid var(--warning-default); }
-.toast--info    { border-left: 3px solid var(--accent-default);  }
+.toast--success {
+  border-left: 3px solid var(--success-default);
+}
+.toast--error {
+  border-left: 3px solid var(--danger-default);
+}
+.toast--warning {
+  border-left: 3px solid var(--warning-default);
+}
+.toast--info {
+  border-left: 3px solid var(--accent-default);
+}
 
 /* ─── Parts ──────────────────────────────────────────────────────── */
 

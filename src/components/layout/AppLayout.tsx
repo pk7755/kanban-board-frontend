@@ -21,7 +21,13 @@ interface AppLayoutProps {
   onSearch: (query: string) => void
 }
 
-export function AppLayout({ boards, activeBoardId, onNewBoard, onDeleteBoard, onSearch }: AppLayoutProps) {
+export function AppLayout({
+  boards,
+  activeBoardId,
+  onNewBoard,
+  onDeleteBoard,
+  onSearch,
+}: AppLayoutProps) {
   const [searchInput, setSearchInput] = useState('')
   const [isOnline, setIsOnline] = useState(navigator.onLine)
   const debouncedSearch = useDebounce(searchInput, 300)
@@ -54,7 +60,12 @@ export function AppLayout({ boards, activeBoardId, onNewBoard, onDeleteBoard, on
   return (
     <div className="app-layout">
       <div className="app-layout__sidebar">
-        <Sidebar boards={boards} activeBoardId={activeBoardId} onNewBoard={onNewBoard} onDeleteBoard={onDeleteBoard} />
+        <Sidebar
+          boards={boards}
+          activeBoardId={activeBoardId}
+          onNewBoard={onNewBoard}
+          onDeleteBoard={onDeleteBoard}
+        />
       </div>
 
       <div className="app-layout__header">

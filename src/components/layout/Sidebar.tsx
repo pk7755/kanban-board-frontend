@@ -22,13 +22,7 @@ interface SidebarProps {
 /** Small avatar shown in the sidebar footer — image if available, else initials */
 function SidebarAvatar({ name, avatarUrl }: { name: string; avatarUrl?: string }) {
   if (avatarUrl) {
-    return (
-      <img
-        src={avatarUrl}
-        alt={`${name}'s avatar`}
-        className="sidebar__avatar-img"
-      />
-    )
+    return <img src={avatarUrl} alt={`${name}'s avatar`} className="sidebar__avatar-img" />
   }
   return (
     <span className="sidebar__avatar-initials" aria-hidden="true">
@@ -89,7 +83,9 @@ export function Sidebar({ boards, activeBoardId, onNewBoard, onDeleteBoard }: Si
                 <button
                   type="button"
                   className="sidebar__board-delete"
-                  onClick={(e) => { void handleDelete(e, board) }}
+                  onClick={(e) => {
+                    void handleDelete(e, board)
+                  }}
                   aria-label={`Delete board "${board.title}"`}
                   title={`Delete "${board.title}"`}
                 >
@@ -176,4 +172,3 @@ export function Sidebar({ boards, activeBoardId, onNewBoard, onDeleteBoard }: Si
     </aside>
   )
 }
-

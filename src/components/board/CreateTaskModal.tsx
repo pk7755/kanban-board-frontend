@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/Button'
 import { useBoardContext } from '@/context/BoardContext'
 import { useAuth } from '@/context/AuthContext'
 import { TagPicker } from '@/components/board/TagPicker'
-import type { Board, Task } from '@/types/entities'
+import type { Board, Tag, Task } from '@/types/entities'
 import { tasksApi } from '@/utils/api'
 import '@/styles/components/Input.css'
 import '@/styles/pages/TaskDetail.css'
@@ -38,10 +38,11 @@ export function CreateTaskModal({ columnId, boardId, onClose, onCreated }: Creat
   const [priority, setPriority] = useState<'low' | 'medium' | 'high'>('medium')
   const [assigneeId, setAssigneeId] = useState<string>(authState.user?.id ?? '')
   const [dueDate, setDueDate] = useState('')
-  const [selectedTagIds, setSelectedTagIds] = useState<string[]>([])
+  const [selectedTags, setSelectedTags] = useState<Tag[]>([])
   const [selectedColumnId, setSelectedColumnId] = useState(columnId)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [errors, setErrors] = useState<{ title?: string; description?: string }>({})
+  const [submitError, setSubmitError] = useState<string | null>(null)
 
   /* ── Open/close dialog ─────────────────────────────────────────── */
   useEffect(() => {
@@ -51,7 +52,7 @@ export function CreateTaskModal({ columnId, boardId, onClose, onCreated }: Creat
     return () => {
       if (dialog.open) dialog.close()
     }
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [])
 
   useEffect(() => {
     const dialog = dialogRef.current
@@ -78,6 +79,7 @@ export function CreateTaskModal({ columnId, boardId, onClose, onCreated }: Creat
     e.preventDefault()
     if (!validate() || isSubmitting) return
     setIsSubmitting(true)
+    setSubmitError(null)
     try {
       const response = await tasksApi.create({
         title: title.trim(),
@@ -85,7 +87,7 @@ export function CreateTaskModal({ columnId, boardId, onClose, onCreated }: Creat
         priority,
         assigneeId: assigneeId || undefined,
         dueDate: dueDate ? new Date(dueDate).toISOString() : undefined,
-        tags: selectedTagIds,
+        tags: selectedTags,
         checklist: [],
         archived: false,
         order: 0,
@@ -94,8 +96,9 @@ export function CreateTaskModal({ columnId, boardId, onClose, onCreated }: Creat
       })
       dispatch({ type: 'ADD_TASK', payload: response.data })
       onCreated(response.data)
-    } catch {
-      // API errors are surfaced via toast elsewhere; just re-enable the button
+    } catch (err) {
+      const apiErr = err as { message?: string }
+      setSubmitError(apiErr?.message ?? 'Failed to create task. Please try again.')
     } finally {
       setIsSubmitting(false)
     }
@@ -130,12 +133,18 @@ export function CreateTaskModal({ columnId, boardId, onClose, onCreated }: Creat
               </div>
             )}
           </div>
-          <Button type="button" variant="ghost" size="sm" iconOnly onClick={onClose} aria-label="Close">
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            iconOnly
+            onClick={onClose}
+            aria-label="Close"
+          >
             <X size={16} />
           </Button>
         </header>
 
-        {/* eslint-disable-next-line @typescript-eslint/no-misused-promises */}
         <form className="task-detail__content" onSubmit={handleSubmit} noValidate>
           {/* Title */}
           <div className="field">
@@ -241,8 +250,15 @@ export function CreateTaskModal({ columnId, boardId, onClose, onCreated }: Creat
             <label className="field__label">Tags</label>
             <TagPicker
               boardTags={boardTags}
-              selectedTagIds={selectedTagIds}
-              onChange={setSelectedTagIds}
+              selectedTagIds={selectedTags.map((t) => t.id)}
+              // eslint-disable-next-line react-hooks/refs
+              portalTarget={dialogRef.current}
+              onChange={(nextIds) => {
+                // Map selected IDs back to full Tag objects for the create payload
+                setSelectedTags(
+                  nextIds.map((id) => boardTags.find((t) => t.id === id)).filter(Boolean) as Tag[],
+                )
+              }}
               onCreateTag={async (name, color) => {
                 const { tagsApi } = await import('@/utils/apiClient')
                 const res = await tagsApi.create(boardId, { label: name, color })
@@ -253,6 +269,11 @@ export function CreateTaskModal({ columnId, boardId, onClose, onCreated }: Creat
           </div>
 
           {/* Actions */}
+          {submitError && (
+            <p className="task-detail__field-error" role="alert" style={{ marginBottom: '0.5rem' }}>
+              {submitError}
+            </p>
+          )}
           <div className="task-detail__create-actions">
             <Button type="submit" variant="primary" disabled={isSubmitting}>
               {isSubmitting ? 'Creating…' : 'Create task'}

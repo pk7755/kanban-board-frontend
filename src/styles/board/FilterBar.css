@@ -53,7 +53,9 @@
   font-weight: var(--font-weight-semibold);
   cursor: pointer;
   margin-left: auto;
-  transition: background 100ms ease, color 100ms ease;
+  transition:
+    background 100ms ease,
+    color 100ms ease;
 }
 .filter-bar__clear:hover {
   background: var(--bg-subtle);
@@ -80,7 +82,10 @@
   font-weight: var(--font-weight-medium);
   cursor: pointer;
   white-space: nowrap;
-  transition: background 100ms ease, border-color 100ms ease, color 100ms ease;
+  transition:
+    background 100ms ease,
+    border-color 100ms ease,
+    color 100ms ease;
   user-select: none;
 }
 .fbar-group__trigger:hover {
@@ -130,7 +135,9 @@
   background: var(--bg-surface);
   border: 1px solid var(--border-default);
   border-radius: var(--radius-md);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.06);
+  box-shadow:
+    0 8px 24px rgba(0, 0, 0, 0.12),
+    0 2px 6px rgba(0, 0, 0, 0.06);
   overflow: hidden;
   padding: var(--space-1) 0;
 }
@@ -195,7 +202,9 @@
   font-size: var(--text-xs);
   text-align: left;
   cursor: pointer;
-  transition: background 80ms ease, color 80ms ease;
+  transition:
+    background 80ms ease,
+    color 80ms ease;
   margin-top: var(--space-1);
 }
 .fbar-group__clear-btn:hover {

@@ -25,7 +25,10 @@ export function Badge({ label, color, variant = 'status' }: BadgeProps) {
       : undefined
 
   return (
-    <span className={['badge', `badge--${variant}`, priorityClass].filter(Boolean).join(' ')} style={style}>
+    <span
+      className={['badge', `badge--${variant}`, priorityClass].filter(Boolean).join(' ')}
+      style={style}
+    >
       {label}
     </span>
   )

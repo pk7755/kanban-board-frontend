@@ -24,13 +24,23 @@
 }
 
 @keyframes mtm-in {
-  from { opacity: 0; transform: scale(0.95) translateY(-8px); }
-  to   { opacity: 1; transform: scale(1) translateY(0); }
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
 }
 
 @keyframes mtm-backdrop-in {
-  from { opacity: 0; }
-  to   { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 /* ── Header ── */
@@ -65,7 +75,9 @@
   color: var(--text-secondary);
   cursor: pointer;
   padding: var(--space-1);
-  transition: background 150ms, color 150ms;
+  transition:
+    background 150ms,
+    color 150ms;
 }
 
 .manage-tags-modal__close:hover {
@@ -140,7 +152,9 @@
   border-radius: var(--radius-md);
   color: var(--text-secondary);
   cursor: pointer;
-  transition: background 140ms, color 140ms;
+  transition:
+    background 140ms,
+    color 140ms;
 }
 
 .manage-tags-modal__icon-btn:hover:not(:disabled) {
@@ -226,7 +240,9 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: transform 120ms, box-shadow 120ms;
+  transition:
+    transform 120ms,
+    box-shadow 120ms;
 }
 
 .manage-tags-modal__swatch:hover {
@@ -235,7 +251,9 @@
 
 .manage-tags-modal__swatch--selected {
   border-color: var(--text-primary);
-  box-shadow: 0 0 0 2px var(--bg-surface), 0 0 0 4px currentColor;
+  box-shadow:
+    0 0 0 2px var(--bg-surface),
+    0 0 0 4px currentColor;
 }
 
 /* ── Preview ── */
@@ -283,5 +301,7 @@
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }

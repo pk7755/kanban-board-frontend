@@ -47,10 +47,13 @@ function AppLayoutShell() {
     }
   }, [location.pathname, navigate])
 
-  const handleDeleteBoard = useCallback(async (boardId: string) => {
-    await boardsApi.delete(boardId)
-    dispatch({ type: 'DELETE_BOARD', payload: { boardId } })
-  }, [dispatch])
+  const handleDeleteBoard = useCallback(
+    async (boardId: string) => {
+      await boardsApi.delete(boardId)
+      dispatch({ type: 'DELETE_BOARD', payload: { boardId } })
+    },
+    [dispatch],
+  )
 
   const contextValue = useMemo(
     () => ({

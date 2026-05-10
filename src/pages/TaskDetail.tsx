@@ -16,8 +16,9 @@ import { Skeleton } from '@/components/ui/Skeleton'
 import { TagPicker } from '@/components/board/TagPicker'
 import { useBoardContext } from '@/context/BoardContext'
 import { usePermissions } from '@/hooks/usePermissions'
-import type { Board, ChecklistItem, Task } from '@/types/entities'
-import { boardsApi, tasksApi } from '@/utils/api'
+import type { ChecklistItem, Tag, Task } from '@/types/entities'
+import { tasksApi } from '@/utils/api'
+import { tasksApi as tasksApiDirect } from '@/utils/apiClient'
 import '@/styles/components/Input.css'
 import '@/styles/pages/TaskDetail.css'
 
@@ -37,20 +38,54 @@ export default function TaskDetail({ taskId, onClose }: TaskDetailProps) {
   const dialogRef = useRef<HTMLDialogElement>(null)
   const { state, dispatch } = useBoardContext()
   const task = state.tasks[taskId]
-  const [board, setBoard] = useState<Board | null>(null)
+
+  // contextBoard is always populated from HYDRATE_BOARD_DETAIL (columns + members + tags).
+  // The separate boardsApi.get call was using adaptBoardDetail which returns tags:[],
+  // so we use contextBoard as the single source of truth for all board data.
+  const contextBoard = task ? state.boards.find((b) => b.id === task.boardId) : undefined
+
+  // All board tags from context (full Tag objects with id+label+color).
+  // Fall back to the tags already embedded in the task (they are Tag[] now).
+  const contextBoardTags = contextBoard?.tags ?? []
+  const boardTags: Tag[] =
+    contextBoardTags.length > 0 ? [...contextBoardTags] : [...(task?.tags ?? [])]
+
+  // Draft initialized once from the task in state.
+  // We do NOT continuously sync draft from task on every UPDATE_TASK dispatch —
+  // that would wipe in-progress text edits. Tag/assignee saves update draft
+  // directly from the API response via setDraft(res.data).
   const [draft, setDraft] = useState<Task | null>(task ?? null)
   const [newChecklistItem, setNewChecklistItem] = useState('')
-  const [isLoading, setIsLoading] = useState(true)
 
-  // Board tags from context — available immediately without waiting for API call.
-  // Falls back to the async-loaded board once it arrives (for freshest data).
-  const contextBoard = task ? state.boards.find((b) => b.id === task.boardId) : undefined
-  const boardTags = (board ?? contextBoard)?.tags ?? []
+  // Derive loading state from draft — no separate isLoading state needed.
+  // draft is null only before the context hydrates (rare: direct URL navigation).
+  const isLoading = draft === null && (!task || !contextBoard)
 
-  // Sync draft when task updates externally (e.g. drag-and-drop column change)
+  // Once context hydrates (task + board available), sync tags and auth fields.
+  // Always sync tags from fresh task data — they are backend-controlled
+  // (not user-typed), so syncing them never wipes in-progress edits.
+  // Text fields (title, description, etc.) are preserved from draft to avoid
+  // wiping in-progress edits.
   useEffect(() => {
-    setDraft(task ?? null) // eslint-disable-line react-hooks/set-state-in-effect
-  }, [task])
+    if (task && contextBoard) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setDraft((prev) => {
+        if (prev === null) return task
+        // Sync non-editable, backend-authoritative fields without overwriting
+        // anything the user may be actively typing.
+        return {
+          ...prev,
+          tags: task.tags,
+          assigneeId: task.assigneeId,
+          assigneeName: task.assigneeName,
+          assigneeAvatarUrl: task.assigneeAvatarUrl,
+          archived: task.archived,
+          columnId: task.columnId,
+          updatedAt: task.updatedAt,
+        }
+      })
+    }
+  }, [task, contextBoard])
 
   // Guard: if task is removed from state (deleted), close the dialog
   useEffect(() => {
@@ -59,9 +94,6 @@ export default function TaskDetail({ taskId, onClose }: TaskDetailProps) {
 
   /**
    * Effect 1 — Open the dialog on mount, close it on unmount.
-   * Empty deps: runs exactly once per real mount/unmount cycle.
-   * StrictMode double-invoke: mount→close→remount→open is handled correctly
-   * because each cleanup closes and each mount reopens.
    */
   useEffect(() => {
     const dialog = dialogRef.current
@@ -70,12 +102,10 @@ export default function TaskDetail({ taskId, onClose }: TaskDetailProps) {
     return () => {
       if (dialog.open) dialog.close()
     }
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [])
 
   /**
    * Effect 2 — Intercept the native ESC key (cancel event).
-   * Prevents the browser from closing the dialog directly; routes through
-   * onClose() so React state drives the unmount (which triggers Effect 1 cleanup).
    */
   useEffect(() => {
     const dialog = dialogRef.current
@@ -90,16 +120,15 @@ export default function TaskDetail({ taskId, onClose }: TaskDetailProps) {
 
   /**
    * Effect 3 — Tab-key focus trap within the dialog.
-   * No dependency on onClose; stable with empty deps.
    */
   useEffect(() => {
     const dialog = dialogRef.current
     if (!dialog) return
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key !== 'Tab') return
-      const focusable = Array.from(
-        dialog.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR),
-      ).filter((el) => !el.hasAttribute('disabled'))
+      const focusable = Array.from(dialog.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)).filter(
+        (el) => !el.hasAttribute('disabled'),
+      )
       if (focusable.length === 0) return
       const first = focusable[0]
       const last = focusable[focusable.length - 1]
@@ -113,29 +142,7 @@ export default function TaskDetail({ taskId, onClose }: TaskDetailProps) {
     }
     dialog.addEventListener('keydown', handleKeyDown)
     return () => dialog.removeEventListener('keydown', handleKeyDown)
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
-
-  useEffect(() => {
-    if (!task) return
-    let cancelled = false
-
-    async function loadDetailData(boardId: string) {
-      setIsLoading(true)
-      try {
-        const boardResponse = await boardsApi.get(boardId)
-        if (cancelled) return
-        setBoard(boardResponse.data)
-      } finally {
-        if (!cancelled) setIsLoading(false)
-      }
-    }
-
-    void loadDetailData(task.boardId)
-
-    return () => {
-      cancelled = true
-    }
-  }, [task])
+  }, [])
 
   const { canEditTask, canDeleteTask } = usePermissions()
   const canEdit = Boolean(task && canEditTask(task))
@@ -143,9 +150,17 @@ export default function TaskDetail({ taskId, onClose }: TaskDetailProps) {
 
   const saveTask = async (changes: Partial<Task>) => {
     if (!task || !draft || !canEdit) return
-    const response = await tasksApi.update(task.id, changes)
-    dispatch({ type: 'UPDATE_TASK', payload: { taskId: task.id, ...response.data } })
-    setDraft(response.data)
+    // Capture the current draft so we can roll back if the API call fails.
+    // (Some callers update draft optimistically before calling saveTask.)
+    const prevDraft = draft
+    try {
+      const response = await tasksApi.update(task.id, changes)
+      dispatch({ type: 'UPDATE_TASK', payload: { taskId: task.id, ...response.data } })
+      setDraft(response.data)
+    } catch {
+      // Revert any optimistic UI changes
+      setDraft(prevDraft)
+    }
   }
 
   const saveField = async <K extends keyof Task>(field: K, value: Task[K]) => {
@@ -158,7 +173,7 @@ export default function TaskDetail({ taskId, onClose }: TaskDetailProps) {
   const handleStatusChange = async (toColumnId: string) => {
     if (!task || !draft || !canEdit || toColumnId === draft.columnId) return
     // Move to end of the target column
-    const targetCol = board?.columns.find((c) => c.id === toColumnId)
+    const targetCol = contextBoard?.columns.find((c) => c.id === toColumnId)
     const toIndex = targetCol ? targetCol.taskIds.length : 0
     const fromColumnId = draft.columnId
     // Optimistic state update
@@ -169,7 +184,15 @@ export default function TaskDetail({ taskId, onClose }: TaskDetailProps) {
     } catch {
       // Revert on failure
       setDraft((current) => (current ? { ...current, columnId: fromColumnId } : current))
-      dispatch({ type: 'MOVE_TASK', payload: { taskId: task.id, fromColumnId: toColumnId, toColumnId: fromColumnId, toIndex: 0 } })
+      dispatch({
+        type: 'MOVE_TASK',
+        payload: {
+          taskId: task.id,
+          fromColumnId: toColumnId,
+          toColumnId: fromColumnId,
+          toIndex: 0,
+        },
+      })
     }
   }
 
@@ -190,8 +213,8 @@ export default function TaskDetail({ taskId, onClose }: TaskDetailProps) {
           <div className="task-detail__header-info">
             <p className="task-detail__eyebrow">Task details</p>
             <h2 className="task-detail__heading">{task.title}</h2>
-            {/* Status shown prominently in header */}
-            {board ? (
+            {/* Status dropdown — always rendered; uses contextBoard columns */}
+            {contextBoard && contextBoard.columns.length > 0 ? (
               <div className="task-detail__status-row">
                 <span className="task-detail__status-pill-label">Status</span>
                 <select
@@ -199,9 +222,11 @@ export default function TaskDetail({ taskId, onClose }: TaskDetailProps) {
                   value={draft.columnId}
                   disabled={!canEdit}
                   aria-label="Task status"
-                  onChange={(event) => { void handleStatusChange(event.target.value) }}
+                  onChange={(event) => {
+                    void handleStatusChange(event.target.value)
+                  }}
                 >
-                  {board.columns
+                  {contextBoard.columns
                     .slice()
                     .sort((a, b) => a.order - b.order)
                     .map((col) => (
@@ -225,7 +250,14 @@ export default function TaskDetail({ taskId, onClose }: TaskDetailProps) {
                 Read only
               </span>
             ) : null}
-            <Button type="button" variant="ghost" size="sm" iconOnly onClick={onClose} aria-label="Close task details">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              iconOnly
+              onClick={onClose}
+              aria-label="Close task details"
+            >
               <X size={16} />
             </Button>
           </div>
@@ -248,7 +280,11 @@ export default function TaskDetail({ taskId, onClose }: TaskDetailProps) {
                 className="field__control"
                 value={draft.title}
                 readOnly={!canEdit}
-                onChange={(event) => setDraft((current) => (current ? { ...current, title: event.target.value } : current))}
+                onChange={(event) =>
+                  setDraft((current) =>
+                    current ? { ...current, title: event.target.value } : current,
+                  )
+                }
                 onBlur={() => {
                   void saveField('title', draft.title)
                 }}
@@ -265,7 +301,9 @@ export default function TaskDetail({ taskId, onClose }: TaskDetailProps) {
                 value={draft.description}
                 readOnly={!canEdit}
                 onChange={(event) =>
-                  setDraft((current) => (current ? { ...current, description: event.target.value } : current))
+                  setDraft((current) =>
+                    current ? { ...current, description: event.target.value } : current,
+                  )
                 }
                 onBlur={() => {
                   void saveField('description', draft.description)
@@ -286,7 +324,9 @@ export default function TaskDetail({ taskId, onClose }: TaskDetailProps) {
                   disabled={!canEdit}
                   onChange={(event) =>
                     setDraft((current) =>
-                      current ? { ...current, priority: event.target.value as Task['priority'] } : current,
+                      current
+                        ? { ...current, priority: event.target.value as Task['priority'] }
+                        : current,
                     )
                   }
                   onBlur={() => {
@@ -314,7 +354,9 @@ export default function TaskDetail({ taskId, onClose }: TaskDetailProps) {
                       current
                         ? {
                             ...current,
-                            dueDate: event.target.value ? new Date(event.target.value).toISOString() : undefined,
+                            dueDate: event.target.value
+                              ? new Date(event.target.value).toISOString()
+                              : undefined,
                           }
                         : current,
                     )
@@ -344,7 +386,7 @@ export default function TaskDetail({ taskId, onClose }: TaskDetailProps) {
                   }}
                 >
                   <option value="">Unassigned</option>
-                  {(board?.members ?? [])
+                  {(contextBoard?.members ?? [])
                     .filter((m) => m.isActive)
                     .map((member) => (
                       <option key={member.userId} value={member.userId}>
@@ -356,7 +398,9 @@ export default function TaskDetail({ taskId, onClose }: TaskDetailProps) {
 
               <div className="field">
                 <label className="field__label">Checklist progress</label>
-                <div className="task-detail__meta-box">{checklistProgress ?? 'No checklist items'}</div>
+                <div className="task-detail__meta-box">
+                  {checklistProgress ?? 'No checklist items'}
+                </div>
               </div>
             </div>
 
@@ -365,56 +409,62 @@ export default function TaskDetail({ taskId, onClose }: TaskDetailProps) {
                 <h3 id="task-tags-heading">Tags</h3>
               </div>
 
-              {/* Current tags — always visible, even before board fully loads */}
-              {draft.tags.length > 0 && (
-                <div className="task-detail__current-tags">
-                  {draft.tags.map((tagId) => {
-                    const tag = boardTags.find((t) => t.id === tagId)
-                      ?? task.tagObjects?.find((t) => t.id === tagId)
-                    if (!tag) return null
-                    return (
-                      <span
-                        key={tagId}
-                        className="task-detail__tag-badge"
-                        style={{
-                          background: `${tag.color}22`,
-                          borderColor: `${tag.color}66`,
-                          color: tag.color,
-                        }}
-                      >
-                        <span
-                          className="task-detail__tag-badge-dot"
-                          style={{ background: tag.color }}
-                        />
-                        {tag.label}
-                      </span>
+              {/* TagPicker — uses dedicated attach/detach APIs for instant, safe tag management */}
+              <TagPicker
+                boardTags={boardTags}
+                selectedTagIds={draft.tags.map((t) => t.id)}
+                disabled={!canEdit}
+                compact
+                // eslint-disable-next-line react-hooks/refs
+                portalTarget={dialogRef.current}
+                onAdd={async (tagId) => {
+                  // Optimistically add the tag so the chip appears instantly
+                  const tagObj = boardTags.find((t) => t.id === tagId)
+                  setDraft((cur) => (cur && tagObj ? { ...cur, tags: [...cur.tags, tagObj] } : cur))
+                  try {
+                    const res = await tasksApiDirect.attachTag(task.id, tagId, task.boardId)
+                    dispatch({ type: 'UPDATE_TASK', payload: { taskId: task.id, ...res.data } })
+                    setDraft(res.data)
+                  } catch {
+                    // Revert if API fails
+                    setDraft((cur) =>
+                      cur ? { ...cur, tags: cur.tags.filter((t) => t.id !== tagId) } : cur,
                     )
-                  })}
-                </div>
-              )}
+                  }
+                }}
+                onRemove={async (tagId) => {
+                  // Optimistically remove the chip so it disappears instantly
+                  setDraft((cur) =>
+                    cur ? { ...cur, tags: cur.tags.filter((t) => t.id !== tagId) } : cur,
+                  )
+                  try {
+                    const res = await tasksApiDirect.detachTag(task.id, tagId, task.boardId)
+                    dispatch({ type: 'UPDATE_TASK', payload: { taskId: task.id, ...res.data } })
+                    setDraft(res.data)
+                  } catch {
+                    // Revert if API fails — add it back
+                    const tagObj = boardTags.find((t) => t.id === tagId)
+                    setDraft((cur) =>
+                      cur && tagObj ? { ...cur, tags: [...cur.tags, tagObj] } : cur,
+                    )
+                  }
+                }}
+                onCreateTag={async (name, color) => {
+                  const { tagsApi } = await import('@/utils/apiClient')
+                  const res = await tagsApi.create(task.boardId, { label: name, color })
+                  dispatch({ type: 'ADD_TAG', payload: { boardId: task.boardId, tag: res.data } })
+                  return res.data
+                }}
+              />
 
-              {draft.tags.length === 0 && (
+              {draft.tags.length === 0 && !canEdit && (
                 <p className="task-detail__muted">No tags attached.</p>
               )}
-
-              {/* Tag picker for managing (add / remove / create) */}
-              <div className="task-detail__tag-picker-wrap">
-                <TagPicker
-                  boardTags={boardTags}
-                  selectedTagIds={[...draft.tags]}
-                  disabled={!canEdit}
-                  onChange={(nextIds) => {
-                    setDraft((cur) => (cur ? { ...cur, tags: nextIds } : cur))
-                    void saveTask({ tags: nextIds })
-                  }}
-                  onCreateTag={async (name, color) => {
-                    const { tagsApi } = await import('@/utils/apiClient')
-                    const res = await tagsApi.create(task.boardId, { label: name, color })
-                    dispatch({ type: 'ADD_TAG', payload: { boardId: task.boardId, tag: res.data } })
-                    return res.data
-                  }}
-                />
-              </div>
+              {draft.tags.length === 0 && canEdit && (
+                <p className="task-detail__muted task-detail__muted--hint">
+                  Click + to attach tags
+                </p>
+              )}
             </section>
 
             <section className="task-detail__section" aria-labelledby="task-checklist-heading">
@@ -435,7 +485,9 @@ export default function TaskDetail({ taskId, onClose }: TaskDetailProps) {
                               ? { ...candidate, completed: event.target.checked }
                               : candidate,
                           )
-                          setDraft((current) => (current ? { ...current, checklist: nextChecklist } : current))
+                          setDraft((current) =>
+                            current ? { ...current, checklist: nextChecklist } : current,
+                          )
                           void saveTask({ checklist: nextChecklist })
                         }}
                       />
@@ -445,9 +497,13 @@ export default function TaskDetail({ taskId, onClose }: TaskDetailProps) {
                         readOnly={!canEdit}
                         onChange={(event) => {
                           const nextChecklist = draft.checklist.map((candidate) =>
-                            candidate.id === item.id ? { ...candidate, text: event.target.value } : candidate,
+                            candidate.id === item.id
+                              ? { ...candidate, text: event.target.value }
+                              : candidate,
                           )
-                          setDraft((current) => (current ? { ...current, checklist: nextChecklist } : current))
+                          setDraft((current) =>
+                            current ? { ...current, checklist: nextChecklist } : current,
+                          )
                         }}
                         onBlur={() => {
                           if (!canEdit) return
@@ -461,8 +517,12 @@ export default function TaskDetail({ taskId, onClose }: TaskDetailProps) {
                         variant="ghost"
                         size="sm"
                         onClick={() => {
-                          const nextChecklist = draft.checklist.filter((candidate) => candidate.id !== item.id)
-                          setDraft((current) => (current ? { ...current, checklist: nextChecklist } : current))
+                          const nextChecklist = draft.checklist.filter(
+                            (candidate) => candidate.id !== item.id,
+                          )
+                          setDraft((current) =>
+                            current ? { ...current, checklist: nextChecklist } : current,
+                          )
                           void saveTask({ checklist: nextChecklist })
                         }}
                       >
@@ -488,7 +548,9 @@ export default function TaskDetail({ taskId, onClose }: TaskDetailProps) {
                         ...draft.checklist,
                         { id: `check-${Date.now()}`, text: value, completed: false },
                       ]
-                      setDraft((current) => (current ? { ...current, checklist: nextChecklist } : current))
+                      setDraft((current) =>
+                        current ? { ...current, checklist: nextChecklist } : current,
+                      )
                       setNewChecklistItem('')
                       void saveTask({ checklist: nextChecklist })
                     }}
@@ -503,7 +565,9 @@ export default function TaskDetail({ taskId, onClose }: TaskDetailProps) {
                         ...draft.checklist,
                         { id: `check-${Date.now()}`, text: value, completed: false },
                       ]
-                      setDraft((current) => (current ? { ...current, checklist: nextChecklist } : current))
+                      setDraft((current) =>
+                        current ? { ...current, checklist: nextChecklist } : current,
+                      )
                       setNewChecklistItem('')
                       void saveTask({ checklist: nextChecklist })
                     }}
@@ -524,7 +588,10 @@ export default function TaskDetail({ taskId, onClose }: TaskDetailProps) {
               onClick={() => {
                 if (!task) return
                 void tasksApi.delete(task.id).then(() => {
-                  dispatch({ type: 'DELETE_TASK', payload: { taskId: task.id, columnId: task.columnId } })
+                  dispatch({
+                    type: 'DELETE_TASK',
+                    payload: { taskId: task.id, columnId: task.columnId },
+                  })
                   dialogRef.current?.close()
                 })
               }}

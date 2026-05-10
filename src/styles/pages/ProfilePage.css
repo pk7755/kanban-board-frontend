@@ -190,7 +190,9 @@
   font-size: var(--text-sm);
   color: var(--color-text-primary);
   width: 100%;
-  transition: border-color 100ms, box-shadow 100ms;
+  transition:
+    border-color 100ms,
+    box-shadow 100ms;
 }
 
 .profile-form__input:focus {
@@ -254,10 +256,18 @@
   transition: background 200ms;
 }
 
-.pw-strength__segment--filled-1 { background: var(--color-danger-400); }
-.pw-strength__segment--filled-2 { background: var(--color-warning-400); }
-.pw-strength__segment--filled-3 { background: var(--color-warning-500); }
-.pw-strength__segment--filled-4 { background: var(--color-success-500); }
+.pw-strength__segment--filled-1 {
+  background: var(--color-danger-400);
+}
+.pw-strength__segment--filled-2 {
+  background: var(--color-warning-400);
+}
+.pw-strength__segment--filled-3 {
+  background: var(--color-warning-500);
+}
+.pw-strength__segment--filled-4 {
+  background: var(--color-success-500);
+}
 
 .pw-strength__label {
   font-size: var(--text-xs);

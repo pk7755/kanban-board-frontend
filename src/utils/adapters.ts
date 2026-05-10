@@ -7,7 +7,22 @@
  * handled here so no component or context needs to know about the backend shape.
  */
 
-import type { Board, BoardMember, Column, Task, Tag, Priority, ChecklistItem } from '@/types/entities'
+import type {
+  Board,
+  BoardMember,
+  Column,
+  Task,
+  Tag,
+  Priority,
+  ChecklistItem,
+} from '@/types/entities'
+
+/** UUID v4 pattern — used to validate tag IDs before sending to backend */
+const UUID_V4_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+
+function isUUIDv4(str: unknown): str is string {
+  return typeof str === 'string' && UUID_V4_RE.test(str)
+}
 
 /* ─── Raw backend shapes ──────────────────────────────────────────── */
 // These are NOT exported — they live only in the adapter layer.
@@ -39,6 +54,7 @@ interface RawMember {
 interface RawBoardDetail extends RawBoardListItem {
   columns: RawColumn[]
   members: RawMember[]
+  tags?: { id: string; name: string; color: string }[]
 }
 
 interface RawTag {
@@ -71,7 +87,7 @@ interface RawTask {
   id: string
   title: string
   description?: string | null
-  priority: string          // 'LOW' | 'MEDIUM' | 'HIGH'
+  priority: string // 'LOW' | 'MEDIUM' | 'HIGH'
   dueDate?: string | null
   columnId: string
   position: number
@@ -148,12 +164,17 @@ export function adaptBoardDetail(raw: RawBoardDetail): Board {
     avatarUrl: m.avatarUrl ?? null,
     isActive: m.isActive ?? true,
   }))
+  const boardTags: Tag[] = (raw.tags ?? []).map((t) => ({
+    id: t.id,
+    label: t.name,
+    color: t.color,
+  }))
   return {
     id: raw.id,
     title: raw.name,
     description: '',
     columns: raw.columns.map((col) => adaptColumn(col, raw.id)),
-    tags: [],
+    tags: boardTags,
     memberIds: members.map((m) => m.userId),
     members,
     ownerId: raw.ownerId,
@@ -173,9 +194,11 @@ export function adaptTask(raw: RawTask, boardId: string): Task {
     completed: item.done,
   }))
 
-  const tagObjects: Tag[] = (raw.tags ?? [])
-    .filter((t): t is RawTaskTag & { tag: RawTag } => !!t.tag)
-    .map((t) => adaptTag(t.tag))
+  // Full Tag objects — always resolve from the joined relation data.
+  // Falls back to id-only when the join is missing (e.g. move endpoint).
+  const tags: Tag[] = (raw.tags ?? [])
+    .filter((t) => (t.tag ? !!t.tag.id : !!t.tagId))
+    .map((t) => (t.tag ? adaptTag(t.tag) : { id: t.tagId, label: '', color: '#64748b' }))
 
   return {
     id: raw.id,
@@ -183,8 +206,7 @@ export function adaptTask(raw: RawTask, boardId: string): Task {
     description: raw.description ?? '',
     priority: adaptPriority(raw.priority),
     dueDate: raw.dueDate ?? undefined,
-    tags: (raw.tags ?? []).map((t) => t.tagId),
-    tagObjects: tagObjects.length > 0 ? tagObjects : undefined,
+    tags,
     assigneeId: raw.assigneeId ?? undefined,
     assigneeName: raw.assignee?.name,
     assigneeAvatarUrl: raw.assignee?.avatarUrl ?? null,
@@ -231,7 +253,7 @@ export function adaptTaskCreatePayload(data: Omit<Task, 'id' | 'createdAt' | 'up
     ...(data.dueDate ? { dueDate: data.dueDate } : {}),
     columnId: data.columnId,
     ...(data.assigneeId ? { assigneeId: data.assigneeId } : {}),
-    ...(data.tags.length > 0 ? { tagIds: [...data.tags] } : {}),
+    ...(data.tags.length > 0 ? { tagIds: data.tags.map((t) => t.id).filter(isUUIDv4) } : {}),
   }
 }
 
@@ -245,7 +267,7 @@ export function adaptTaskUpdatePayload(data: Partial<Task>): Record<string, unkn
   if (data.columnId !== undefined) out.columnId = data.columnId
   // Use key-presence check: `{ assigneeId: undefined }` = "unassign" → null
   if ('assigneeId' in data) out.assigneeId = data.assigneeId ?? null
-  if (data.tags !== undefined) out.tagIds = [...data.tags]
+  if (data.tags !== undefined) out.tagIds = data.tags.map((t) => t.id).filter(isUUIDv4)
   if (data.checklist !== undefined) {
     out.checklistItems = data.checklist.map((item, index) => ({
       text: item.text,

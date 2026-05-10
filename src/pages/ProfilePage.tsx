@@ -42,12 +42,18 @@ function compressImage(file: File): Promise<string> {
       canvas.width = Math.round(img.width * scale)
       canvas.height = Math.round(img.height * scale)
       const ctx = canvas.getContext('2d')
-      if (!ctx) { reject(new Error('Canvas unavailable')); return }
+      if (!ctx) {
+        reject(new Error('Canvas unavailable'))
+        return
+      }
       ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
       URL.revokeObjectURL(url)
       resolve(canvas.toDataURL('image/jpeg', 0.8))
     }
-    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Invalid image')) }
+    img.onerror = () => {
+      URL.revokeObjectURL(url)
+      reject(new Error('Invalid image'))
+    }
     img.src = url
   })
 }
@@ -101,29 +107,36 @@ export default function ProfilePage() {
 
   /* ── Save profile ───────────────────────────────────────── */
   /* ── Avatar upload ──────────────────────────────────────── */
-  const handleAvatarChange = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-    if (!file.type.startsWith('image/')) {
-      showToast({ message: 'Please select an image file', variant: 'error' })
-      return
-    }
-    setAvatarUploading(true)
-    try {
-      const compressed = await compressImage(file)
-      setAvatarUrl(compressed)
-      await usersApi.updateMe(user.id, { name: profileName.trim(), email: profileEmail.trim().toLowerCase(), avatarUrl: compressed })
-      updateProfile(profileName.trim(), profileEmail.trim().toLowerCase(), compressed)
-      showToast({ message: 'Avatar updated', variant: 'success' })
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Failed to upload avatar'
-      showToast({ message: msg, variant: 'error' })
-    } finally {
-      setAvatarUploading(false)
-      // reset so same file can be re-selected
-      if (avatarInputRef.current) avatarInputRef.current.value = ''
-    }
-  }, [user.id, profileName, profileEmail, updateProfile, showToast])
+  const handleAvatarChange = useCallback(
+    async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0]
+      if (!file) return
+      if (!file.type.startsWith('image/')) {
+        showToast({ message: 'Please select an image file', variant: 'error' })
+        return
+      }
+      setAvatarUploading(true)
+      try {
+        const compressed = await compressImage(file)
+        setAvatarUrl(compressed)
+        await usersApi.updateMe(user.id, {
+          name: profileName.trim(),
+          email: profileEmail.trim().toLowerCase(),
+          avatarUrl: compressed,
+        })
+        updateProfile(profileName.trim(), profileEmail.trim().toLowerCase(), compressed)
+        showToast({ message: 'Avatar updated', variant: 'success' })
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : 'Failed to upload avatar'
+        showToast({ message: msg, variant: 'error' })
+      } finally {
+        setAvatarUploading(false)
+        // reset so same file can be re-selected
+        if (avatarInputRef.current) avatarInputRef.current.value = ''
+      }
+    },
+    [user.id, profileName, profileEmail, updateProfile, showToast],
+  )
 
   /* ── Save profile ───────────────────────────────────────── */
   const handleSaveProfile = useCallback(async () => {

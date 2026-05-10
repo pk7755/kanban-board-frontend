@@ -19,7 +19,11 @@ interface FilterBarProps {
 }
 
 const PRIORITY_LABELS: Record<string, string> = { low: 'Low', medium: 'Medium', high: 'High' }
-const PRIORITY_COLORS: Record<string, string> = { low: '#22c55e', medium: '#f59e0b', high: '#ef4444' }
+const PRIORITY_COLORS: Record<string, string> = {
+  low: '#22c55e',
+  medium: '#f59e0b',
+  high: '#ef4444',
+}
 
 /* ── Generic checkbox dropdown group ─────────────────────────── */
 
@@ -58,15 +62,26 @@ function FilterGroup({ label, options, selected, onToggle, onClear }: CheckGroup
       >
         <span>{label}</span>
         {count > 0 && <span className="fbar-group__badge">{count}</span>}
-        <ChevronDown size={12} className={`fbar-group__chevron${open ? ' fbar-group__chevron--open' : ''}`} />
+        <ChevronDown
+          size={12}
+          className={`fbar-group__chevron${open ? ' fbar-group__chevron--open' : ''}`}
+        />
       </button>
 
       {open && (
-        <div className="fbar-group__dropdown" role="listbox" aria-multiselectable="true" aria-label={label}>
+        <div
+          className="fbar-group__dropdown"
+          role="listbox"
+          aria-multiselectable="true"
+          aria-label={label}
+        >
           {options.map((opt) => {
             const checked = selected.includes(opt.id)
             return (
-              <label key={opt.id} className={`fbar-option${checked ? ' fbar-option--checked' : ''}`}>
+              <label
+                key={opt.id}
+                className={`fbar-option${checked ? ' fbar-option--checked' : ''}`}
+              >
                 <input
                   type="checkbox"
                   className="fbar-option__checkbox"
@@ -74,7 +89,11 @@ function FilterGroup({ label, options, selected, onToggle, onClear }: CheckGroup
                   onChange={() => onToggle(opt.id)}
                 />
                 {opt.color && (
-                  <span className="fbar-option__dot" style={{ background: opt.color }} aria-hidden="true" />
+                  <span
+                    className="fbar-option__dot"
+                    style={{ background: opt.color }}
+                    aria-hidden="true"
+                  />
                 )}
                 <span className="fbar-option__label">{opt.label}</span>
               </label>
@@ -120,7 +139,10 @@ export function FilterBar({ boardMembers, boardTags, boardColumns }: FilterBarPr
   const tagOptions = boardTags.map((t) => ({ id: t.id, label: t.label ?? t.id, color: t.color }))
 
   return (
-    <div className={`filter-bar${isActive ? ' filter-bar--active' : ''}`} aria-label="Board filters">
+    <div
+      className={`filter-bar${isActive ? ' filter-bar--active' : ''}`}
+      aria-label="Board filters"
+    >
       <span className="filter-bar__label">
         <Filter size={13} aria-hidden="true" />
         Filter
@@ -170,7 +192,12 @@ export function FilterBar({ boardMembers, boardTags, boardColumns }: FilterBarPr
 
       {/* Clear all */}
       {isActive && (
-        <button type="button" className="filter-bar__clear" onClick={clearFilter} aria-label="Clear all filters">
+        <button
+          type="button"
+          className="filter-bar__clear"
+          onClick={clearFilter}
+          aria-label="Clear all filters"
+        >
           <X size={13} aria-hidden="true" />
           Clear all
         </button>

@@ -14,7 +14,12 @@ interface SkeletonProps {
 
 const LINE_WIDTHS = ['100%', '92%', '84%', '76%', '88%']
 
-export function Skeleton({ width = '100%', height = '1rem', className = '', lines }: SkeletonProps) {
+export function Skeleton({
+  width = '100%',
+  height = '1rem',
+  className = '',
+  lines,
+}: SkeletonProps) {
   if (lines && lines > 1) {
     return (
       <div className={['skeleton-group', className].filter(Boolean).join(' ')} aria-hidden="true">
@@ -29,5 +34,11 @@ export function Skeleton({ width = '100%', height = '1rem', className = '', line
     )
   }
 
-  return <span className={['skeleton', className].filter(Boolean).join(' ')} style={{ width, height }} aria-hidden="true" />
+  return (
+    <span
+      className={['skeleton', className].filter(Boolean).join(' ')}
+      style={{ width, height }}
+      aria-hidden="true"
+    />
+  )
 }

@@ -32,9 +32,18 @@ type SortMode = 'default' | 'priority' | 'dueDate' | 'title'
 
 const PRIORITY_ORDER = { high: 0, medium: 1, low: 2 }
 
-export function Column({ column, tasks, taskMap, userMap, searchQuery, onTaskClick, onAddTask, isFirst = false }: ColumnProps) {
+export function Column({
+  column,
+  tasks,
+  taskMap,
+  userMap,
+  searchQuery,
+  onTaskClick,
+  onAddTask,
+  isFirst = false,
+}: ColumnProps) {
   const { state: authState } = useAuth()
-  const { activeBoard, dispatch } = useBoardContext()
+  const { dispatch } = useBoardContext()
   const { taskId: draggedTaskId, fromColumnId, endDrag } = useDragContext()
   const [isEditingTitle, setIsEditingTitle] = useState(false)
   const [draftTitle, setDraftTitle] = useState(column.title)
@@ -61,8 +70,7 @@ export function Column({ column, tasks, taskMap, userMap, searchQuery, onTaskCli
   const totalTaskCount = useMemo(() => {
     return column.taskIds
       .map((id) => taskMap[id])
-      .filter((t): t is Task => Boolean(t) && !t.archived)
-      .length
+      .filter((t): t is Task => Boolean(t) && !t.archived).length
   }, [column.taskIds, taskMap])
 
   // `tasks` is already board-level-filtered by BoardPage. Never fall back to
@@ -71,16 +79,14 @@ export function Column({ column, tasks, taskMap, userMap, searchQuery, onTaskCli
   // reappear.
   const filteredTasks = useMemo(() => {
     const query = searchQuery.trim().toLowerCase()
-    const boardTags = activeBoard?.tags ?? []
     const nonArchived = tasks.filter((t) => !t.archived)
 
     const visible = query
       ? nonArchived.filter((task) => {
-          const tagLabels = boardTags
-            .filter((tag) => task.tags?.includes(tag.id))
-            .map((tag) => (tag.label ?? '').toLowerCase())
-            .join(' ')
-          const assigneeName = task.assigneeId ? (userMap[task.assigneeId]?.name ?? '').toLowerCase() : ''
+          const tagLabels = task.tags.map((tag) => (tag.label ?? '').toLowerCase()).join(' ')
+          const assigneeName = task.assigneeId
+            ? (userMap[task.assigneeId]?.name ?? '').toLowerCase()
+            : ''
           return [task.title ?? '', task.description ?? '', tagLabels, assigneeName]
             .join(' ')
             .toLowerCase()
@@ -104,7 +110,7 @@ export function Column({ column, tasks, taskMap, userMap, searchQuery, onTaskCli
           return left.order - right.order
       }
     })
-  }, [activeBoard?.tags, tasks, searchQuery, sortMode, userMap])
+  }, [tasks, searchQuery, sortMode, userMap])
 
   /* ── Drop helpers ── */
 
@@ -177,14 +183,19 @@ export function Column({ column, tasks, taskMap, userMap, searchQuery, onTaskCli
       return
     }
     const response = await columnsApi.rename(column.id, nextTitle)
-    dispatch({ type: 'RENAME_COLUMN', payload: { columnId: column.id, title: response.data.title } })
+    dispatch({
+      type: 'RENAME_COLUMN',
+      payload: { columnId: column.id, title: response.data.title },
+    })
     setDraftTitle(response.data.title)
     setIsEditingTitle(false)
   }
 
   const handleDelete = async () => {
     if (!isManager) return
-    const confirmed = window.confirm(`Delete column “${column.title}”? This will remove all tasks in it.`)
+    const confirmed = window.confirm(
+      `Delete column “${column.title}”? This will remove all tasks in it.`,
+    )
     if (!confirmed) return
     await columnsApi.delete(column.id)
     dispatch({ type: 'DELETE_COLUMN', payload: { columnId: column.id, boardId: column.boardId } })
@@ -217,7 +228,14 @@ export function Column({ column, tasks, taskMap, userMap, searchQuery, onTaskCli
               aria-label="Rename column"
             />
           ) : (
-            <button className="board-column__title-button" type="button" onClick={() => { setDraftTitle(column.title); setIsEditingTitle(true) }}>
+            <button
+              className="board-column__title-button"
+              type="button"
+              onClick={() => {
+                setDraftTitle(column.title)
+                setIsEditingTitle(true)
+              }}
+            >
               <span className="board-column__title">{column.title}</span>
             </button>
           )}
@@ -260,7 +278,9 @@ export function Column({ column, tasks, taskMap, userMap, searchQuery, onTaskCli
         onDragEnter={handleDragEnter}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
-        onDrop={(e) => { void handleDrop(e) }}
+        onDrop={(e) => {
+          void handleDrop(e)
+        }}
       >
         {filteredTasks.length > 0 ? (
           filteredTasks.map((task, i) => (
@@ -279,7 +299,11 @@ export function Column({ column, tasks, taskMap, userMap, searchQuery, onTaskCli
         ) : (
           <EmptyState
             title={totalTaskCount === 0 ? 'No tasks yet' : 'No matching tasks'}
-            description={totalTaskCount === 0 ? 'Add a task to start filling this column.' : 'Try a different search or sort option.'}
+            description={
+              totalTaskCount === 0
+                ? 'Add a task to start filling this column.'
+                : 'Try a different search or sort option.'
+            }
           />
         )}
         {/* Drop indicator at end of list */}

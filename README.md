@@ -17,10 +17,10 @@ npm test             # Vitest unit tests
 
 **Default mock credentials** (when `VITE_USE_MOCK=true`):
 
-| Role | Email | Password |
-|------|-------|----------|
-| Manager | `manager@test.com` | `Manager@123` |
-| Team Member | `member@test.com` | `Member@123` |
+| Role        | Email              | Password      |
+| ----------- | ------------------ | ------------- |
+| Manager     | `manager@test.com` | `Manager@123` |
+| Team Member | `member@test.com`  | `Member@123`  |
 
 ---
 
@@ -95,28 +95,28 @@ src/
 
 ## Custom Hooks
 
-| Hook | Purpose |
-|------|---------|
-| `useLocalStorage<T>` | Read/write localStorage with versioning and type safety |
-| `useDebounce<T>` | Delay a value update — used for search (300 ms) |
-| `useUndoRedo<T>` | Generic undo/redo stack, capped at 20 entries |
-| `useKeyboardShortcut` | Declaratively register keyboard shortcuts; skips when focus is in inputs |
-| `usePermissions` | Single source of truth for role-based checks: `canEditTask`, `canDragTask`, `canDeleteTask`, `canReassign`, `canManageUsers` |
+| Hook                  | Purpose                                                                                                                      |
+| --------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| `useLocalStorage<T>`  | Read/write localStorage with versioning and type safety                                                                      |
+| `useDebounce<T>`      | Delay a value update — used for search (300 ms)                                                                              |
+| `useUndoRedo<T>`      | Generic undo/redo stack, capped at 20 entries                                                                                |
+| `useKeyboardShortcut` | Declaratively register keyboard shortcuts; skips when focus is in inputs                                                     |
+| `usePermissions`      | Single source of truth for role-based checks: `canEditTask`, `canDragTask`, `canDeleteTask`, `canReassign`, `canManageUsers` |
 
 ---
 
 ## Keyboard Shortcuts
 
-| Key | Action |
-|-----|--------|
-| `N` | Open "Add task" form in the first column |
-| `/` | Focus the global search input |
-| `↑ / ↓` | Move focus up/down within a column |
-| `← / →` | Move focus to same-index task in the previous/next column |
-| `Enter` or `Space` | Open task detail popup when a card is focused |
-| `Esc` | Close any open popup or dialog |
-| `Ctrl + Z` | Undo last action (move, delete, or edit task) |
-| `Ctrl + Shift + Z` / `Ctrl + Y` | Redo |
+| Key                             | Action                                                    |
+| ------------------------------- | --------------------------------------------------------- |
+| `N`                             | Open "Add task" form in the first column                  |
+| `/`                             | Focus the global search input                             |
+| `↑ / ↓`                         | Move focus up/down within a column                        |
+| `← / →`                         | Move focus to same-index task in the previous/next column |
+| `Enter` or `Space`              | Open task detail popup when a card is focused             |
+| `Esc`                           | Close any open popup or dialog                            |
+| `Ctrl + Z`                      | Undo last action (move, delete, or edit task)             |
+| `Ctrl + Shift + Z` / `Ctrl + Y` | Redo                                                      |
 
 ---
 
@@ -124,7 +124,7 @@ src/
 
 **Making undo/redo work with `useReducer` without infinite loops.**
 
-The challenge: `useReducer` produces a new state object on every action. To undo, we need to snapshot the *previous* state before the action fires. Using a second `useReducer` or `useState` for the undo stack caused circular dependencies where snapshotting mutated state, which triggered effects, which dispatched actions.
+The challenge: `useReducer` produces a new state object on every action. To undo, we need to snapshot the _previous_ state before the action fires. Using a second `useReducer` or `useState` for the undo stack caused circular dependencies where snapshotting mutated state, which triggered effects, which dispatched actions.
 
 **Solution:** I keep the undo/redo stacks in `useRef` arrays (no re-render on push/pop) and maintain three separate state variables (`canUndo`, `canRedo`, `lastUndoDescription`) that are updated only when the stacks actually change via a `syncFlags` callback. This gives reactive UI updates without making the stacks themselves reactive. The `stateRef` (always pointing to the current state) lets undo/redo callbacks read the latest state without being listed as effect dependencies.
 
@@ -143,4 +143,3 @@ The challenge: `useReducer` produces a new state object on every action. To undo
 - **CSS:** All colors are CSS variables defined in `styles/tokens.css`. No hardcoded hex values in component CSS files. Themes are switched by toggling a class on `<html>`.
 - **Offline:** `navigator.onLine` + `online`/`offline` events drive the offline banner in the header.
 - **Import/Export:** Export serialises the active board + its tasks to JSON. Import parses and dispatches `IMPORT_BOARD`.
-

@@ -126,8 +126,7 @@ export function UsersPage() {
     if (!form.email.trim()) errors.email = 'Email is required.'
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) errors.email = 'Enter a valid email.'
     if (dialogMode === 'add' && !form.password) errors.password = 'Password is required.'
-    if (form.password && scorePassword(form.password) < 2)
-      errors.password = 'Password is too weak.'
+    if (form.password && scorePassword(form.password) < 2) errors.password = 'Password is too weak.'
     setFormErrors(errors)
     return Object.keys(errors).length === 0
   }
@@ -193,7 +192,7 @@ export function UsersPage() {
       const pw =
         typeof res.data === 'string'
           ? res.data
-          : (res.data as { temporaryPassword?: string })?.temporaryPassword ?? null
+          : ((res.data as { temporaryPassword?: string })?.temporaryPassword ?? null)
       setTempPassword(pw)
       if (!pw) setResetError('Password reset succeeded but the server returned no password.')
     } catch (err) {
@@ -268,7 +267,9 @@ export function UsersPage() {
       {/* Table */}
       {isLoading ? (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
-          {[0, 1, 2].map((i) => <Skeleton key={i} height="48px" />)}
+          {[0, 1, 2].map((i) => (
+            <Skeleton key={i} height="48px" />
+          ))}
         </div>
       ) : (
         <div className="users-page__table-wrap" role="region" aria-label="Team members table">
@@ -280,13 +281,22 @@ export function UsersPage() {
                 <th scope="col">Role</th>
                 <th scope="col">Status</th>
                 <th scope="col">Joined</th>
-                <th scope="col"><span className="sr-only">Actions</span></th>
+                <th scope="col">
+                  <span className="sr-only">Actions</span>
+                </th>
               </tr>
             </thead>
             <tbody>
               {filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={6} style={{ textAlign: 'center', color: 'var(--text-tertiary)', padding: 'var(--space-8)' }}>
+                  <td
+                    colSpan={6}
+                    style={{
+                      textAlign: 'center',
+                      color: 'var(--text-tertiary)',
+                      padding: 'var(--space-8)',
+                    }}
+                  >
                     No team members match your filters.
                   </td>
                 </tr>
@@ -304,18 +314,27 @@ export function UsersPage() {
                     <td>{user.email}</td>
                     <td>{user.role === 'MANAGER' ? 'Manager' : 'Team Member'}</td>
                     <td>
-                      <span className={`users-page__status-badge users-page__status-badge--${user.isActive ? 'active' : 'inactive'}`}>
+                      <span
+                        className={`users-page__status-badge users-page__status-badge--${user.isActive ? 'active' : 'inactive'}`}
+                      >
                         {user.isActive ? 'Active' : 'Inactive'}
                       </span>
                     </td>
                     <td>
-                      {new Intl.DateTimeFormat(undefined, { year: 'numeric', month: 'short', day: 'numeric' }).format(
-                        new Date(user.createdAt),
-                      )}
+                      {new Intl.DateTimeFormat(undefined, {
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric',
+                      }).format(new Date(user.createdAt))}
                     </td>
                     <td>
                       <div className="users-page__actions-cell">
-                        <Button variant="ghost" size="sm" onClick={() => openEditDialog(user)} aria-label={`Edit ${user.name}`}>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => openEditDialog(user)}
+                          aria-label={`Edit ${user.name}`}
+                        >
                           Edit
                         </Button>
                         {user.isActive && user.id !== currentUserId && (
@@ -343,7 +362,9 @@ export function UsersPage() {
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => { void handleResetPassword(user) }}
+                          onClick={() => {
+                            void handleResetPassword(user)
+                          }}
                           aria-label={`Reset password for ${user.name}`}
                           title="Reset password"
                         >
@@ -360,14 +381,26 @@ export function UsersPage() {
       )}
 
       {/* ── Add / Edit dialog ── */}
-      <dialog ref={dialogRef} className="users-page__dialog" aria-label={dialogMode === 'add' ? 'Add team member' : 'Edit team member'}>
+      <dialog
+        ref={dialogRef}
+        className="users-page__dialog"
+        aria-label={dialogMode === 'add' ? 'Add team member' : 'Edit team member'}
+      >
         <h2 className="users-page__dialog-title">
           {dialogMode === 'add' ? 'Add Team Member' : 'Edit Team Member'}
         </h2>
-        <form className="users-page__dialog-form" onSubmit={(e) => { void handleFormSubmit(e) }} noValidate>
+        <form
+          className="users-page__dialog-form"
+          onSubmit={(e) => {
+            void handleFormSubmit(e)
+          }}
+          noValidate
+        >
           {/* Name */}
           <div className="field">
-            <label className="field__label" htmlFor="um-name">Name</label>
+            <label className="field__label" htmlFor="um-name">
+              Name
+            </label>
             <input
               id="um-name"
               className={`field__control${formErrors.name ? ' field__control--error' : ''}`}
@@ -376,11 +409,17 @@ export function UsersPage() {
               autoComplete="name"
               required
             />
-            {formErrors.name && <span className="field__error" role="alert">{formErrors.name}</span>}
+            {formErrors.name && (
+              <span className="field__error" role="alert">
+                {formErrors.name}
+              </span>
+            )}
           </div>
           {/* Email */}
           <div className="field">
-            <label className="field__label" htmlFor="um-email">Email</label>
+            <label className="field__label" htmlFor="um-email">
+              Email
+            </label>
             <input
               id="um-email"
               type="email"
@@ -390,11 +429,17 @@ export function UsersPage() {
               autoComplete="email"
               required
             />
-            {formErrors.email && <span className="field__error" role="alert">{formErrors.email}</span>}
+            {formErrors.email && (
+              <span className="field__error" role="alert">
+                {formErrors.email}
+              </span>
+            )}
           </div>
           {/* Role — disabled when editing self */}
           <div className="field">
-            <label className="field__label" htmlFor="um-role">Role</label>
+            <label className="field__label" htmlFor="um-role">
+              Role
+            </label>
             <select
               id="um-role"
               className="field__control"
@@ -403,7 +448,9 @@ export function UsersPage() {
               disabled={dialogMode === 'edit' && editingUser?.id === currentUserId}
             >
               {ROLES.map((r) => (
-                <option key={r} value={r}>{r === 'MANAGER' ? 'Manager' : 'Team Member'}</option>
+                <option key={r} value={r}>
+                  {r === 'MANAGER' ? 'Manager' : 'Team Member'}
+                </option>
               ))}
             </select>
             {dialogMode === 'edit' && editingUser?.id === currentUserId && (
@@ -413,7 +460,9 @@ export function UsersPage() {
           {/* Password — required on add; use Reset Password button for edit */}
           {dialogMode === 'add' ? (
             <div className="field">
-              <label className="field__label" htmlFor="um-password">Password</label>
+              <label className="field__label" htmlFor="um-password">
+                Password
+              </label>
               <input
                 id="um-password"
                 type="password"
@@ -433,11 +482,16 @@ export function UsersPage() {
                   </span>
                 </>
               )}
-              {formErrors.password && <span className="field__error" role="alert">{formErrors.password}</span>}
+              {formErrors.password && (
+                <span className="field__error" role="alert">
+                  {formErrors.password}
+                </span>
+              )}
             </div>
           ) : (
             <p className="field__hint" style={{ margin: 0 }}>
-              To change password, use the <strong>Reset Password</strong> button (↺) in the member row.
+              To change password, use the <strong>Reset Password</strong> button (↺) in the member
+              row.
             </p>
           )}
 
@@ -458,14 +512,16 @@ export function UsersPage() {
           title="Deactivate Member"
           message={
             <>
-              Are you sure you want to deactivate{' '}
-              <strong>{deactivateTarget.name}</strong>? They will lose access immediately.
+              Are you sure you want to deactivate <strong>{deactivateTarget.name}</strong>? They
+              will lose access immediately.
             </>
           }
           confirmLabel={isDeactivating ? 'Deactivating…' : 'Deactivate'}
           variant="danger"
           isLoading={isDeactivating}
-          onConfirm={() => { void handleDeactivate() }}
+          onConfirm={() => {
+            void handleDeactivate()
+          }}
           onCancel={() => setDeactivateTarget(null)}
         />
       )}
@@ -476,14 +532,16 @@ export function UsersPage() {
           title="Delete Member"
           message={
             <>
-              Are you sure you want to permanently delete{' '}
-              <strong>{deleteTarget.name}</strong>? This action cannot be undone.
+              Are you sure you want to permanently delete <strong>{deleteTarget.name}</strong>? This
+              action cannot be undone.
             </>
           }
           confirmLabel={isDeleting ? 'Deleting…' : 'Delete'}
           variant="danger"
           isLoading={isDeleting}
-          onConfirm={() => { void handleDelete() }}
+          onConfirm={() => {
+            void handleDelete()
+          }}
           onCancel={() => setDeleteTarget(null)}
         />
       )}
@@ -492,20 +550,31 @@ export function UsersPage() {
       <dialog ref={resetDialogRef} className="users-page__dialog" aria-label="Temporary password">
         <h2 className="users-page__dialog-title">Temporary Password</h2>
         <p style={{ color: 'var(--text-secondary)', margin: '0 0 var(--space-4)' }}>
-          Share this temporary password with <strong>{resetTarget?.name}</strong>.
-          They should change it on next login.
+          Share this temporary password with <strong>{resetTarget?.name}</strong>. They should
+          change it on next login.
         </p>
         {resetError ? (
-          <p role="alert" style={{ color: 'var(--danger-default)', fontSize: 'var(--text-sm)', margin: '0 0 var(--space-2)' }}>
+          <p
+            role="alert"
+            style={{
+              color: 'var(--danger-default)',
+              fontSize: 'var(--text-sm)',
+              margin: '0 0 var(--space-2)',
+            }}
+          >
             {resetError}
           </p>
         ) : tempPassword ? (
           <div className="users-page__temp-pw">
-            <span className="users-page__temp-pw-value" aria-label="Temporary password">{tempPassword}</span>
+            <span className="users-page__temp-pw-value" aria-label="Temporary password">
+              {tempPassword}
+            </span>
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => { void handleCopy() }}
+              onClick={() => {
+                void handleCopy()
+              }}
               aria-label="Copy temporary password"
             >
               <Copy size={13} aria-hidden="true" />
@@ -518,7 +587,11 @@ export function UsersPage() {
         <div className="users-page__dialog-actions" style={{ marginTop: 'var(--space-4)' }}>
           <Button
             variant="primary"
-            onClick={() => { setResetTarget(null); setTempPassword(null); setResetError(null) }}
+            onClick={() => {
+              setResetTarget(null)
+              setTempPassword(null)
+              setResetError(null)
+            }}
           >
             Done
           </Button>

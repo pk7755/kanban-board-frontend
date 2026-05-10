@@ -13,9 +13,18 @@ import '@/styles/components/ManageTagsModal.css'
 
 /* ── Preset palette ─────────────────────────────────────────────── */
 const COLOR_PALETTE = [
-  '#ef4444', '#f97316', '#eab308', '#22c55e',
-  '#14b8a6', '#3b82f6', '#8b5cf6', '#ec4899',
-  '#6b7280', '#0ea5e9', '#84cc16', '#f43f5e',
+  '#ef4444',
+  '#f97316',
+  '#eab308',
+  '#22c55e',
+  '#14b8a6',
+  '#3b82f6',
+  '#8b5cf6',
+  '#ec4899',
+  '#6b7280',
+  '#0ea5e9',
+  '#84cc16',
+  '#f43f5e',
 ]
 
 interface Props {
@@ -24,7 +33,7 @@ interface Props {
 }
 
 interface EditingTag {
-  id: string | null  // null = new tag
+  id: string | null // null = new tag
   label: string
   color: string
 }
@@ -47,7 +56,10 @@ export function ManageTagsModal({ boardId, onClose }: Props) {
     const el = dialogRef.current
     if (!el) return
     el.showModal()
-    const handleCancel = (e: Event) => { e.preventDefault(); onClose() }
+    const handleCancel = (e: Event) => {
+      e.preventDefault()
+      onClose()
+    }
     el.addEventListener('cancel', handleCancel)
     return () => el.removeEventListener('cancel', handleCancel)
   }, [onClose])
@@ -79,8 +91,14 @@ export function ManageTagsModal({ boardId, onClose }: Props) {
   async function handleSave() {
     if (!editing) return
     const label = editing.label.trim()
-    if (!label) { setError('Tag name is required'); return }
-    if (!/^#[0-9A-Fa-f]{6}$/.test(editing.color)) { setError('Invalid color'); return }
+    if (!label) {
+      setError('Tag name is required')
+      return
+    }
+    if (!/^#[0-9A-Fa-f]{6}$/.test(editing.color)) {
+      setError('Invalid color')
+      return
+    }
 
     setSaving(true)
     setError(null)
@@ -116,7 +134,12 @@ export function ManageTagsModal({ boardId, onClose }: Props) {
   }
 
   return (
-    <dialog ref={dialogRef} className="manage-tags-modal" onClick={handleBackdrop} aria-label="Manage board tags">
+    <dialog
+      ref={dialogRef}
+      className="manage-tags-modal"
+      onClick={handleBackdrop}
+      aria-label="Manage board tags"
+    >
       {/* ── Header ── */}
       <div className="manage-tags-modal__header">
         <h2 className="manage-tags-modal__title">
@@ -167,10 +190,11 @@ export function ManageTagsModal({ boardId, onClose }: Props) {
                 title="Delete"
                 disabled={deleting === tag.id || saving || !!editing}
               >
-                {deleting === tag.id
-                  ? <span className="manage-tags-modal__spinner" aria-hidden="true" />
-                  : <Trash2 size={14} />
-                }
+                {deleting === tag.id ? (
+                  <span className="manage-tags-modal__spinner" aria-hidden="true" />
+                ) : (
+                  <Trash2 size={14} />
+                )}
               </button>
             </div>
           </li>
@@ -239,20 +263,28 @@ export function ManageTagsModal({ boardId, onClose }: Props) {
             </span>
           </div>
 
-          {error && <p className="manage-tags-modal__error" role="alert">{error}</p>}
+          {error && (
+            <p className="manage-tags-modal__error" role="alert">
+              {error}
+            </p>
+          )}
 
           <div className="manage-tags-modal__form-actions">
             <Button variant="ghost" size="sm" onClick={cancelEdit} disabled={saving}>
               Cancel
             </Button>
             <Button variant="primary" size="sm" onClick={() => void handleSave()} disabled={saving}>
-              {saving ? 'Saving…' : (editing.id ? 'Save Changes' : 'Add Tag')}
+              {saving ? 'Saving…' : editing.id ? 'Save Changes' : 'Add Tag'}
             </Button>
           </div>
         </div>
       ) : (
         <div className="manage-tags-modal__footer">
-          {error && <p className="manage-tags-modal__error" role="alert">{error}</p>}
+          {error && (
+            <p className="manage-tags-modal__error" role="alert">
+              {error}
+            </p>
+          )}
           <Button variant="secondary" size="sm" onClick={startAdd}>
             <Plus size={14} aria-hidden="true" />
             Add Tag

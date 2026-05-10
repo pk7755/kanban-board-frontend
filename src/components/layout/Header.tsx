@@ -19,7 +19,6 @@ interface HeaderProps {
   isOnline: boolean
 }
 
-
 export function Header({ searchValue, onSearchChange, isOnline }: HeaderProps) {
   const { state, logout } = useAuth()
   const { theme, setTheme } = useTheme()
@@ -29,7 +28,7 @@ export function Header({ searchValue, onSearchChange, isOnline }: HeaderProps) {
 
   const nextTheme = theme === 'light' ? 'dark' : theme === 'dark' ? 'system' : 'light'
   const ThemeIcon = theme === 'light' ? Sun : theme === 'dark' ? Moon : Monitor
-    const handleLogoutConfirm = () => {
+  const handleLogoutConfirm = () => {
     logout()
     navigate('/login')
   }
@@ -101,7 +100,6 @@ export function Header({ searchValue, onSearchChange, isOnline }: HeaderProps) {
           onCancel={() => setShowLogoutConfirm(false)}
         />
       )}
-
     </header>
   )
 }

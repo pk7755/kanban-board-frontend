@@ -47,7 +47,7 @@ function formatDueDate(value?: string): string | null {
 
 function TaskCardComponent({ task, userMap, searchQuery, onTaskClick }: TaskCardProps) {
   const { state: authState } = useAuth()
-  const { dispatch, activeBoard } = useBoardContext()
+  const { dispatch } = useBoardContext()
   const { startDrag, endDrag, taskId: draggedTaskId } = useDragContext()
   const ghostRef = useRef<HTMLElement | null>(null)
   const [isEditingTitle, setIsEditingTitle] = useState(false)
@@ -58,11 +58,8 @@ function TaskCardComponent({ task, userMap, searchQuery, onTaskClick }: TaskCard
   const assigneeFromMap = task.assigneeId ? userMap[task.assigneeId] : undefined
   const assigneeName = task.assigneeName ?? assigneeFromMap?.name
   const assigneeAvatarUrl = task.assigneeAvatarUrl ?? assigneeFromMap?.avatarUrl
-  const boardTags = activeBoard?.tags ?? []
-  // Prefer tag objects embedded in the task (from backend); fall back to board lookup
-  const tags = task.tagObjects?.length
-    ? [...task.tagObjects]
-    : boardTags.filter((tag) => task.tags.includes(tag.id))
+  // Tags are now full Tag objects on task.tags — no lookup needed
+  const tags = [...task.tags]
   const checklistTotal = task.checklist.length
   const checklistCompleted = task.checklist.filter((item) => item.completed).length
   const formattedDueDate = formatDueDate(task.dueDate)
@@ -76,7 +73,10 @@ function TaskCardComponent({ task, userMap, searchQuery, onTaskClick }: TaskCard
 
   /* ── Drag handlers ── */
   function handleDragStart(e: React.DragEvent<HTMLElement>) {
-    if (isReadOnly) { e.preventDefault(); return }
+    if (isReadOnly) {
+      e.preventDefault()
+      return
+    }
 
     // CRITICAL: prevent the event from bubbling to the column wrapper <div draggable>.
     // Without this, the column's onDragStart fires too, setting draggingColumnId and
@@ -166,7 +166,9 @@ function TaskCardComponent({ task, userMap, searchQuery, onTaskClick }: TaskCard
         <span
           className={`task-card__drag-handle${isReadOnly ? ' task-card__drag-handle--locked' : ''}`}
           aria-hidden="true"
-          title={isReadOnly ? `Read-only — assigned to ${assigneeName ?? 'someone'}` : 'Drag to move'}
+          title={
+            isReadOnly ? `Read-only — assigned to ${assigneeName ?? 'someone'}` : 'Drag to move'
+          }
         >
           {isReadOnly ? <Lock size={14} /> : <GripVertical size={16} />}
         </span>
@@ -190,7 +192,10 @@ function TaskCardComponent({ task, userMap, searchQuery, onTaskClick }: TaskCard
               className="task-card__title"
               onDoubleClick={(event) => {
                 event.stopPropagation()
-                if (!isReadOnly) { setDraftTitle(task.title); setIsEditingTitle(true) }
+                if (!isReadOnly) {
+                  setDraftTitle(task.title)
+                  setIsEditingTitle(true)
+                }
               }}
             >
               {renderHighlightedText(task.title, searchQuery)}
@@ -202,7 +207,9 @@ function TaskCardComponent({ task, userMap, searchQuery, onTaskClick }: TaskCard
       <div className="task-card__meta-row">
         <Badge label={task.priority} variant="priority" />
         {formattedDueDate ? (
-          <span className={`task-card__due-date${isOverdue ? ' task-card__due-date--overdue' : ''}`}>
+          <span
+            className={`task-card__due-date${isOverdue ? ' task-card__due-date--overdue' : ''}`}
+          >
             <CalendarDays size={14} aria-hidden="true" />
             {formattedDueDate}
           </span>
@@ -229,7 +236,8 @@ function TaskCardComponent({ task, userMap, searchQuery, onTaskClick }: TaskCard
                   const target = e.currentTarget
                   target.style.display = 'none'
                   const parent = target.parentElement
-                  if (parent && assigneeName) parent.textContent = assigneeName.charAt(0).toUpperCase()
+                  if (parent && assigneeName)
+                    parent.textContent = assigneeName.charAt(0).toUpperCase()
                 }}
               />
             ) : assigneeName ? (
@@ -242,7 +250,10 @@ function TaskCardComponent({ task, userMap, searchQuery, onTaskClick }: TaskCard
         </div>
 
         {checklistTotal > 0 ? (
-          <span className="task-card__checklist" aria-label={`Checklist progress ${checklistCompleted} of ${checklistTotal}`}>
+          <span
+            className="task-card__checklist"
+            aria-label={`Checklist progress ${checklistCompleted} of ${checklistTotal}`}
+          >
             <ListChecks size={14} aria-hidden="true" />
             {checklistCompleted}/{checklistTotal}
           </span>

@@ -49,7 +49,8 @@ function BoardPageInner() {
   const { boardId } = useParams<{ boardId?: string }>()
   const { state: authState } = useAuth()
   const { state, dispatch, activeBoard, activeTasks } = useBoardContext()
-  const { searchQuery, newBoardDialogOpen, closeNewBoardDialog, openNewBoardDialog } = useSearchContext()
+  const { searchQuery, newBoardDialogOpen, closeNewBoardDialog, openNewBoardDialog } =
+    useSearchContext()
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null)
   const handleCloseTaskDetail = useCallback(() => setSelectedTaskId(null), [])
   const [createTaskColumnId, setCreateTaskColumnId] = useState<string | null>(null)
@@ -135,8 +136,8 @@ function BoardPageInner() {
       // Sync draft title only when board changes identity (not every re-render)
       setDraftTitle(activeBoard.title) // eslint-disable-line react-hooks/set-state-in-effect
     }
-  // We deliberately reset only on board id change, not every property change
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // We deliberately reset only on board id change, not every property change
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeBoard?.id])
 
   useEffect(() => {
@@ -162,6 +163,7 @@ function BoardPageInner() {
   const { filter, pruneAssigneeIds } = useFilter()
 
   const tasksByColumn = useMemo(() => {
+    // eslint-disable-next-line react-hooks/purity
     const now = Date.now()
 
     function matchesFilter(task: Task): boolean {
@@ -169,7 +171,11 @@ function BoardPageInner() {
       if (filter.priorities.length > 0 && !filter.priorities.includes(task.priority)) return false
 
       // ── Tags (OR within tags) ──
-      if (filter.tagIds.length > 0 && !filter.tagIds.some((id) => task.tags.includes(id))) return false
+      if (
+        filter.tagIds.length > 0 &&
+        !filter.tagIds.some((id) => task.tags.some((t) => t.id === id))
+      )
+        return false
 
       // ── Assignee (multi-select — OR logic) ──
       if (filter.assigneeIds.length > 0) {
@@ -199,12 +205,10 @@ function BoardPageInner() {
       return true
     }
 
-    return activeTasks
-      .filter(matchesFilter)
-      .reduce<Record<string, Task[]>>((acc, task) => {
-        acc[task.columnId] = [...(acc[task.columnId] ?? []), task]
-        return acc
-      }, {})
+    return activeTasks.filter(matchesFilter).reduce<Record<string, Task[]>>((acc, task) => {
+      acc[task.columnId] = [...(acc[task.columnId] ?? []), task]
+      return acc
+    }, {})
   }, [activeTasks, filter])
 
   const handleRenameBoard = async () => {
@@ -216,7 +220,10 @@ function BoardPageInner() {
       return
     }
     const response = await boardsApi.rename(activeBoard.id, title)
-    dispatch({ type: 'RENAME_BOARD', payload: { boardId: activeBoard.id, title: response.data.title } })
+    dispatch({
+      type: 'RENAME_BOARD',
+      payload: { boardId: activeBoard.id, title: response.data.title },
+    })
     setDraftTitle(response.data.title)
     setIsEditingTitle(false)
   }
@@ -355,38 +362,43 @@ function BoardPageInner() {
     }
   }, [activeBoard, draggingColumnId, dispatch])
 
+  const handleAddMember = useCallback(
+    async (email: string) => {
+      if (!activeBoard) return
+      await boardMembersApi.add(activeBoard.id, email)
+      // Reload board detail to get fresh member list
+      const detail = await boardsApi.get(activeBoard.id)
+      dispatch({
+        type: 'UPDATE_BOARD_MEMBERS',
+        payload: {
+          boardId: activeBoard.id,
+          memberIds: detail.data.memberIds as string[],
+          members: (detail.data.members ?? []) as import('@/types/entities').BoardMember[],
+        },
+      })
+    },
+    [activeBoard, dispatch],
+  )
 
-  const handleAddMember = useCallback(async (email: string) => {
-    if (!activeBoard) return
-    await boardMembersApi.add(activeBoard.id, email)
-    // Reload board detail to get fresh member list
-    const detail = await boardsApi.get(activeBoard.id)
-    dispatch({
-      type: 'UPDATE_BOARD_MEMBERS',
-      payload: {
-        boardId: activeBoard.id,
-        memberIds: detail.data.memberIds as string[],
-        members: (detail.data.members ?? []) as import('@/types/entities').BoardMember[],
-      },
-    })
-  }, [activeBoard, dispatch])
-
-  const handleRemoveMember = useCallback(async (userId: string) => {
-    if (!activeBoard) return
-    await boardMembersApi.remove(activeBoard.id, userId)
-    const remainingMembers = (activeBoard.members ?? []).filter((m) => m.userId !== userId)
-    // Optimistic update
-    dispatch({
-      type: 'UPDATE_BOARD_MEMBERS',
-      payload: {
-        boardId: activeBoard.id,
-        memberIds: activeBoard.memberIds.filter((id) => id !== userId) as string[],
-        members: remainingMembers as import('@/types/entities').BoardMember[],
-      },
-    })
-    // Remove the deleted member from active assignee filters
-    pruneAssigneeIds(remainingMembers.map((m) => m.userId))
-  }, [activeBoard, dispatch, pruneAssigneeIds])
+  const handleRemoveMember = useCallback(
+    async (userId: string) => {
+      if (!activeBoard) return
+      await boardMembersApi.remove(activeBoard.id, userId)
+      const remainingMembers = (activeBoard.members ?? []).filter((m) => m.userId !== userId)
+      // Optimistic update
+      dispatch({
+        type: 'UPDATE_BOARD_MEMBERS',
+        payload: {
+          boardId: activeBoard.id,
+          memberIds: activeBoard.memberIds.filter((id) => id !== userId) as string[],
+          members: remainingMembers as import('@/types/entities').BoardMember[],
+        },
+      })
+      // Remove the deleted member from active assignee filters
+      pruneAssigneeIds(remainingMembers.map((m) => m.userId))
+    },
+    [activeBoard, dispatch, pruneAssigneeIds],
+  )
 
   if (!boardId && state.boards.length > 0) {
     return <Navigate to={`/boards/${state.boards[0].id}`} replace />
@@ -405,7 +417,11 @@ function BoardPageInner() {
             </Button>
           }
         />
-        <dialog ref={newBoardDialogRef} className="board-page__dialog" aria-label="Create new board">
+        <dialog
+          ref={newBoardDialogRef}
+          className="board-page__dialog"
+          aria-label="Create new board"
+        >
           <form className="board-page__dialog-form" method="dialog" onSubmit={handleCreateBoard}>
             <h2>Create new board</h2>
             <div className="field">
@@ -436,7 +452,11 @@ function BoardPageInner() {
               <Button type="submit" variant="primary">
                 Create board
               </Button>
-              <Button type="button" variant="ghost" onClick={() => newBoardDialogRef.current?.close()}>
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => newBoardDialogRef.current?.close()}
+              >
                 Cancel
               </Button>
             </div>
@@ -504,11 +524,17 @@ function BoardPageInner() {
               aria-label="Rename board"
             />
           ) : (
-            <button className="board-page__title-button" type="button" onClick={() => setIsEditingTitle(true)}>
+            <button
+              className="board-page__title-button"
+              type="button"
+              onClick={() => setIsEditingTitle(true)}
+            >
               <h1 className="board-page__title">{activeBoard.title}</h1>
             </button>
           )}
-          <p className="board-page__description">{activeBoard.description || 'No board description yet.'}</p>
+          <p className="board-page__description">
+            {activeBoard.description || 'No board description yet.'}
+          </p>
           <div className="board-page__meta">
             <button
               type="button"
@@ -517,7 +543,8 @@ function BoardPageInner() {
               aria-label={`${activeBoard.memberIds.length} members — click to manage`}
             >
               <Users size={14} aria-hidden="true" />
-              {activeBoard.memberIds.length} {activeBoard.memberIds.length === 1 ? 'member' : 'members'}
+              {activeBoard.memberIds.length}{' '}
+              {activeBoard.memberIds.length === 1 ? 'member' : 'members'}
             </button>
             <button
               type="button"
@@ -577,7 +604,13 @@ function BoardPageInner() {
             </Button>
           )}
           {/* Export / Import */}
-          <Button variant="ghost" size="sm" onClick={handleExport} aria-label="Export board as JSON" title="Export board">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleExport}
+            aria-label="Export board as JSON"
+            title="Export board"
+          >
             <Download size={14} aria-hidden="true" />
           </Button>
           <Button
@@ -606,7 +639,11 @@ function BoardPageInner() {
         boardColumns={(activeBoard.columns ?? []).slice().sort((a, b) => a.order - b.order)}
       />
 
-      <div className="board-page__canvas" ref={canvasRef} aria-label={`${activeBoard.title} columns`}>
+      <div
+        className="board-page__canvas"
+        ref={canvasRef}
+        aria-label={`${activeBoard.title} columns`}
+      >
         {activeBoard.columns.map((column, index) => (
           <div
             key={column.id}
@@ -615,7 +652,10 @@ function BoardPageInner() {
             onDragOver={(e) => handleColumnDragOver(e, column.id)}
             onDrop={handleColumnDrop}
             onDragEnd={() => setDraggingColumnId(null)}
-            style={{ opacity: draggingColumnId === column.id ? 0.5 : 1, transition: 'opacity 0.15s' }}
+            style={{
+              opacity: draggingColumnId === column.id ? 0.5 : 1,
+              transition: 'opacity 0.15s',
+            }}
           >
             <Column
               column={column}
@@ -662,7 +702,11 @@ function BoardPageInner() {
             <Button type="submit" variant="primary">
               Create board
             </Button>
-            <Button type="button" variant="ghost" onClick={() => newBoardDialogRef.current?.close()}>
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => newBoardDialogRef.current?.close()}
+            >
               Cancel
             </Button>
           </div>
@@ -671,7 +715,11 @@ function BoardPageInner() {
 
       {selectedTaskId ? (
         <Suspense fallback={<Skeleton className="board-page__modal-skeleton" height="12rem" />}>
-          <TaskDetail key={selectedTaskId} taskId={selectedTaskId} onClose={handleCloseTaskDetail} />
+          <TaskDetail
+            key={selectedTaskId}
+            taskId={selectedTaskId}
+            onClose={handleCloseTaskDetail}
+          />
         </Suspense>
       ) : null}
 
@@ -702,10 +750,7 @@ function BoardPageInner() {
       )}
 
       {showTagsModal && activeBoard && (
-        <ManageTagsModal
-          boardId={activeBoard.id}
-          onClose={() => setShowTagsModal(false)}
-        />
+        <ManageTagsModal boardId={activeBoard.id} onClose={() => setShowTagsModal(false)} />
       )}
     </div>
   )

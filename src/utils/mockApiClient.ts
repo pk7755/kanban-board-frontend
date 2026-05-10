@@ -379,7 +379,10 @@ export const usersApi = {
 
   delete: (userId: string, _options?: RequestOptions) => {
     const stored = readStore<User[]>('users', [])
-    writeStore('users', stored.filter((u) => u.id !== userId))
+    writeStore(
+      'users',
+      stored.filter((u) => u.id !== userId),
+    )
     return delay(undefined as unknown as void)
   },
 
@@ -387,7 +390,11 @@ export const usersApi = {
     return delay(ok({ temporaryPassword: 'Temp@1234' }))
   },
 
-  changePassword: (userId: string, data: { currentPassword: string; newPassword: string }, _options?: RequestOptions) => {
+  changePassword: (
+    userId: string,
+    data: { currentPassword: string; newPassword: string },
+    _options?: RequestOptions,
+  ) => {
     if (!data.currentPassword) mockError('Current password is required', 400)
     if (!allUsers().find((u) => u.id === userId)) mockError('User not found', 404)
     return delay(ok({ message: 'Password changed successfully' }))

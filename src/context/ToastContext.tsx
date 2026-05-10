@@ -10,13 +10,7 @@
  * Passing an `action` (e.g. Undo) pauses auto-dismiss on hover.
  */
 
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useReducer,
-  useRef,
-} from 'react'
+import { createContext, useCallback, useContext, useReducer, useRef } from 'react'
 import type { ReactNode } from 'react'
 
 /* ─── Types ───────────────────────────────────────────────────────── */
@@ -40,9 +34,7 @@ type ToastInput = Omit<Toast, 'id' | 'duration'> & { duration?: number }
 
 /* ─── Reducer ─────────────────────────────────────────────────────── */
 
-type ToastAction2 =
-  | { type: 'ADD'; toast: Toast }
-  | { type: 'REMOVE'; id: string }
+type ToastAction2 = { type: 'ADD'; toast: Toast } | { type: 'REMOVE'; id: string }
 
 function toastReducer(state: Toast[], action: ToastAction2): Toast[] {
   switch (action.type) {
